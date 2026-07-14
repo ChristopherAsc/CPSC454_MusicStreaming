@@ -18,6 +18,7 @@ windows:
 run server using: 
 
 `python manage.py runserver`
+make sure youre in the betterTitanRadio directory
 
 # How we will work through this on github
 
