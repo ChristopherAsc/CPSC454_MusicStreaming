@@ -1,0 +1,2 @@
+ffmpeg-python
+PyAudio>=0.2.14
