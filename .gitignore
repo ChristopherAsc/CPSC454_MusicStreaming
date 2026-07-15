@@ -6,3 +6,8 @@
 #ignoring sqlite3 file that is generated with django
 
 *.sqlite3
+
+
+#ignore dev vscode settings
+
+*.vscode
