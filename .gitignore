@@ -1,3 +1,8 @@
 # ignore the venv file (i named my venv file .venv)
 
 *.venv
+
+
+#ignoring sqlite3 file that is generated with django
+
+*.sqlite3
