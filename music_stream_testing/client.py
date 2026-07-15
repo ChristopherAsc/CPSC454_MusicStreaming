@@ -31,6 +31,18 @@ def main():
         sock.close()
         return
     channels, rate = struct.unpack('!II', header)
+    # channels/rate arrive from the network as uint32 (up to ~4.3 billion) and
+    # are passed straight into PortAudio's C layer, which sizes internal
+    # buffers from them. Reject out-of-range values here so a malformed or
+    # hostile server can't drive a huge native allocation or crash.
+    if not (1 <= channels <= 8):
+        print(f'Rejecting bogus channel count: {channels}')
+        sock.close()
+        return
+    if not (8000 <= rate <= 192000):
+        print(f'Rejecting bogus sample rate: {rate}')
+        sock.close()
+        return
     print(f'Stream format: {channels} channel(s) @ {rate} Hz')
 
     p = pyaudio.PyAudio()
