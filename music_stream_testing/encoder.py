@@ -38,6 +38,11 @@ class AudioEncoder:
                 ac=self.channels,
                 ar=self.rate,
             )
+            # ffmpeg writes to stderr, which is inherited by our terminal. Left
+            # at its defaults every instance dumps a build banner and a running
+            # progress line, burying the program's own output -- and with one
+            # ffmpeg per client that noise multiplies. Keep real errors only.
+            .global_args('-hide_banner', '-loglevel', 'error', '-nostats')
         )
         args = ffmpeg.compile(stream_spec)
         # Run ffmpeg in its own process group so a terminal signal (e.g.

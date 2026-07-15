@@ -15,7 +15,7 @@ def handle_shutdown_signal(signum, frame):
 signal.signal(signal.SIGINT, handle_shutdown_signal)
 signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
-FILE_INPUT = 'club_music.ogg'
+FILE_INPUT = 'media/club_music.ogg'
 
 encoder = AudioEncoder()
 pcm_stream = encoder.open(FILE_INPUT)
