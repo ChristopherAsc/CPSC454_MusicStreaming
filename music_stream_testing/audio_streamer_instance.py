@@ -1,5 +1,6 @@
 import socket
 import struct
+import threading
 
 import protocol
 from encoder import AudioEncoder
@@ -26,6 +27,7 @@ class AudioStreamerInstance:
         self._encoder = None
         self._pcm_stream = None
         self._closed = False
+        self._stop_event = threading.Event()
 
     @property
     def addr(self):
@@ -73,19 +75,28 @@ class AudioStreamerInstance:
         )
 
     def stream(self):
-        """Pump encoded PCM to the client until the file ends or the client goes away.
+        """Pump encoded PCM to the client as fast as the socket accepts it.
 
-        Returns True if the whole file was sent, False if the client hung up early.
+        Returns True if the whole file was sent, False if the client hung up
+        early or close() stopped us.
+
+        Deliberately unpaced: sendall() returns once the kernel buffers the
+        bytes, not once the client plays them, so a song lands in the socket in
+        about a second and the client buffers the rest. Note the consequence --
+        an instance lives only as long as the transfer, not the playback, so
+        the server's cap bounds simultaneous transfers (and their ffmpeg
+        processes), not simultaneous listeners.
         """
         if self._pcm_stream is None:
             raise RuntimeError('start() must be called before stream()')
 
         try:
-            while True:
+            while not self._stop_event.is_set():
                 data = self._pcm_stream.read(self._chunk_size)
                 if not data:
                     return True
                 self._conn.sendall(data)
+            return False
         except (BrokenPipeError, ConnectionResetError):
             return False
         except (ValueError, OSError):
@@ -103,6 +114,8 @@ class AudioStreamerInstance:
         if self._closed:
             return
         self._closed = True
+        # Wake stream() if it is sleeping off its pacing lead.
+        self._stop_event.set()
 
         # 1. Encoder first (kills ffmpeg, frees any blocked read).
         if self._encoder is not None:

@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 import socket
@@ -181,6 +182,24 @@ class StreamServer:
         log.info('All instances closed')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Stream audio files to connecting clients.')
+    parser.add_argument(
+        '--host',
+        default=HOST,
+        help=f'IP address to bind to; {HOST} accepts on every interface, '
+             f'127.0.0.1 restricts to this machine (default: {HOST})',
+    )
+    parser.add_argument('--port', type=int, default=PORT, help=f'port to bind (default: {PORT})')
+    parser.add_argument(
+        '--max-instances',
+        type=int,
+        default=MAX_INSTANCES,
+        help=f'simultaneous streams allowed, one ffmpeg each (default: {MAX_INSTANCES})',
+    )
+    return parser.parse_args()
+
+
 def main():
     # Configured here rather than at import: this is the entry point, so
     # importing StreamServer elsewhere won't hijack the root logger.
@@ -189,7 +208,8 @@ def main():
         format='%(asctime)s [%(levelname)s] %(threadName)s | %(message)s',
         datefmt='%H:%M:%S',
     )
-    server = StreamServer()
+    args = parse_args()
+    server = StreamServer(host=args.host, port=args.port, max_instances=args.max_instances)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

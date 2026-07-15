@@ -70,7 +70,13 @@ class AudioStreamClient:
 
     def _read_status(self):
         """Read the server's verdict on our request."""
-        raw = protocol.recv_exact(self._sock, protocol.STATUS_SIZE)
+        try:
+            raw = protocol.recv_exact(self._sock, protocol.STATUS_SIZE)
+        except ConnectionResetError:
+            # A server at capacity closes on us with our request still unread
+            # in its receive buffer, which makes the kernel answer with RST
+            # rather than a clean FIN. Same meaning as a silent close.
+            raw = None
         if raw is None:
             log.error('Server closed without responding (it may be at capacity)')
             return False
