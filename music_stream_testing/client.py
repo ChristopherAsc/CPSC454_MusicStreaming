@@ -1,4 +1,5 @@
 import argparse
+import ctypes
 import logging
 import socket
 import struct
@@ -13,9 +14,41 @@ HOST = '127.0.0.1'
 PORT = 5001
 CHUNK_SIZE = 4096
 
+# Signature of libasound's error callback: (file, line, function, err, fmt).
+_ALSA_ERROR_HANDLER_TYPE = ctypes.CFUNCTYPE(
+    None, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p
+)
+# libasound keeps the raw pointer we hand it, so the callback object must stay
+# referenced here. If it were local it would be garbage collected and the next
+# ALSA warning would call into freed memory.
+_alsa_error_handler = None
+
 # Sane bounds for a format advertised by the server (see connect()).
 MIN_CHANNELS, MAX_CHANNELS = 1, 8
 MIN_RATE, MAX_RATE = 8000, 192000
+
+
+def silence_alsa_warnings():
+    """Stop libasound printing device-probe noise to stderr.
+
+    Opening a device makes ALSA probe hardware this machine may not have, and
+    it reports each miss ('Unknown PCM cards.pcm.rear', 'Cannot open device
+    /dev/dsp') straight to stderr from C -- beneath Python, so logging cannot
+    filter it. Handing it a no-op handler is the supported way to quiet it.
+    Playback is unaffected: these are probe results, not failures.
+    """
+    global _alsa_error_handler
+
+    def ignore(filename, line, function, err, fmt):
+        pass
+
+    _alsa_error_handler = _ALSA_ERROR_HANDLER_TYPE(ignore)
+    try:
+        asound = ctypes.CDLL('libasound.so.2')
+        asound.snd_lib_error_set_handler(_alsa_error_handler)
+    except (OSError, AttributeError):
+        # No libasound (non-Linux, or a different audio stack): nothing to do.
+        pass
 
 
 class AudioStreamClient:
@@ -201,6 +234,8 @@ def main():
     # Bare message format: this is a single-threaded CLI, so timestamps and
     # levels would only clutter what the user reads.
     logging.basicConfig(level=logging.INFO, format='%(message)s')
+    # Must run before PyAudio initialises, which is what triggers the probing.
+    silence_alsa_warnings()
     args = parse_args()
     # The context manager owns the socket + device and closes both in order,
     # even if connect()/play() raise.
