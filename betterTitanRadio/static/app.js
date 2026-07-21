@@ -28,8 +28,8 @@ function setPlaybackState(isPlaying) {
 
     if (!playIcon || !pauseIcon) {
         playToggle.innerHTML = `
-            <img id="play-icon" src="/static/music/images/play.svg" alt="Play" class="image-button">
-            <img id="pause-icon" src="/static/music/images/pause.svg" alt="Pause" style="display: none;" class="image-button">
+            <img id="play-icon" src="/static/images/play.svg" alt="Play" class="image-button">
+            <img id="pause-icon" src="/static/images/pause.svg" alt="Pause" style="display: none;" class="image-button">
         `;
         playIcon = playToggle.querySelector('#play-icon');
         pauseIcon = playToggle.querySelector('#pause-icon');
