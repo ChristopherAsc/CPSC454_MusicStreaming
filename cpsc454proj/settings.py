@@ -35,7 +35,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'music',
+    # 'betterTitanRadio.music',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

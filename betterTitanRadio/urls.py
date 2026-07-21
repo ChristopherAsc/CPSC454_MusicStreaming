@@ -6,6 +6,7 @@ from . import views
 # naming convention if you want to get specific should be  (route)/ with the / after the route if needed. Route name alone works just fine.
 
 urlpatterns = [
-    path("", views.index, name="index"),
+    path("test", views.index, name="index"),
+    path('', views.home, name='home'),
     path("test", views.test, name="test" )
 ]
