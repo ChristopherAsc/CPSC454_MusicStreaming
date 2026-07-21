@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
+    path("", include("betterTitanRadio.urls")),
     path('', include('music.urls')),
     path('admin/', admin.site.urls),
 ]
