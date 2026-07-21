@@ -8,6 +8,8 @@ const playerCover = document.querySelector('#player-cover');
 const heroTitle = document.querySelector('#hero-title');
 const heroMeta = document.querySelector('#hero-meta');
 const playToggle = document.querySelector('#play-toggle');
+let playIcon = document.querySelector('#play-icon');
+let pauseIcon = document.querySelector('#pause-icon');
 const progressBar = document.querySelector('#progress-bar');
 
 function setNowPlaying(title, artist) {
@@ -16,8 +18,31 @@ function setNowPlaying(title, artist) {
     playerCover.textContent = title.charAt(0);
     heroTitle.textContent = title;
     heroMeta.textContent = `${artist} · Streaming preview from the server library.`;
-    playToggle.textContent = 'Pause';
     progressBar.style.width = '18%';
+}
+
+function setPlaybackState(isPlaying) {
+    if (!playToggle) {
+        return;
+    }
+
+    if (!playIcon || !pauseIcon) {
+        playToggle.innerHTML = `
+            <img id="play-icon" src="/static/music/images/play.svg" alt="Play" class="image-button">
+            <img id="pause-icon" src="/static/music/images/pause.svg" alt="Pause" style="display: none;" class="image-button">
+        `;
+        playIcon = playToggle.querySelector('#play-icon');
+        pauseIcon = playToggle.querySelector('#pause-icon');
+    }
+
+    if (!playIcon || !pauseIcon) {
+        return;
+    }
+
+    playIcon.style.display = isPlaying ? 'none' : 'block';
+    pauseIcon.style.display = isPlaying ? 'block' : 'none';
+    playIcon.hidden = isPlaying;
+    pauseIcon.hidden = !isPlaying;
 }
 
 playButtons.forEach((button) => {
@@ -27,8 +52,11 @@ playButtons.forEach((button) => {
 });
 
 playToggle.addEventListener('click', () => {
-    playToggle.textContent = playToggle.textContent === 'Play' ? 'Pause' : 'Play';
+    const isPlaying = playIcon.hidden;
+    setPlaybackState(!isPlaying);
 });
+
+setPlaybackState(false);
 
 searchInput.addEventListener('input', () => {
     const query = searchInput.value.trim().toLowerCase();

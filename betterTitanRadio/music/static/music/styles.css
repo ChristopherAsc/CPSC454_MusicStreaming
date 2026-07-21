@@ -211,6 +211,16 @@ h1 {
     width: 100%;
 }
 
+#play-icon,
+#pause-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.image-button {
+    display: block;
+}
 .hero {
     align-items: center;
     background:
@@ -250,7 +260,11 @@ h1 {
 
 .secondary-button,
 .icon-button,
-.danger-button,
+.danger-button {
+    background: var(--panel-lift);
+    color: var(--text);
+}
+
 .player-bar button {
     background: var(--panel-lift);
     color: var(--text);
@@ -566,9 +580,40 @@ h1 {
     min-width: 180px;
 }
 
-.player-bar .primary-control {
+.player-bar button.primary-control {
+    align-items: center;
     background: var(--green);
+    border-radius: 50%;
     color: #07110e;
+    display: inline-flex;
+    height: 48px;
+    justify-content: center;
+    min-width: 48px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.player-bar button.primary-control img {
+    height: 20px;
+    width: 20px;
+}
+
+.player-bar button[class*="icon-button"] {
+    align-items: center;
+    background: var(--green);
+    border-radius: 50%;
+    color: #07110e;
+    display: inline-flex;
+    height: 48px;
+    justify-content: center;
+    min-width: 48px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.player-bar button[class*="icon-button"] img {
+    height: 20px;
+    width: 20px;
 }
 
 .progress {
