@@ -11,3 +11,7 @@
 #ignore dev vscode settings
 
 *.vscode
+
+#ignore local environment/secrets file
+
+.env
