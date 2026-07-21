@@ -7,6 +7,16 @@
 
 *.sqlite3
 
+
+#ignore dev vscode settings
+
+*.vscode
+
+#ignore local environment/secrets file
+
+.env
+
+
 # ignore Python files generated when Django runs
 
 __pycache__/
