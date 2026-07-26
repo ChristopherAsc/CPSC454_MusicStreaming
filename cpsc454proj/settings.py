@@ -90,6 +90,7 @@ if os.environ.get('DB_HOST'):
         }
     }
 else:
+    print("the database wasn't found.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
