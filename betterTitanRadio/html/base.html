@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Better Titan Radio</title>
+  <link rel="stylesheet" href="static/styles.css" />
+</head>
+<body style="background: #000000; margin: 0; min-height: 100vh;">
+  <div class="app" style="background: #000000; min-height: 100vh;">
+
+    <!-- Top bar: logo + search + profile -->
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand__logo" src="static/images/logo.svg" alt="Better Titan Radio logo" />
+        <span class="brand__name">Better Titan Radio</span>
+      </div>
+
+      <div class="search">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search"
+          aria-label="Search"
+          data-route="search"
+        />
+      </div>
+
+      <a class="profile-btn" id="profileBtn" href="profile.html" aria-label="Profile and login">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+      </a>
+    </header>
+
+    <!-- Main content: sidebar (persistent) + stage (swappable) -->
+    <main class="content">
+      <aside class="library">
+        <h2 class="library__title">Library</h2>
+        <ul class="library__list" id="libraryList">
+          <!-- library items rendered by app.js, stays constant across routes -->
+        </ul>
+      </aside>
+
+      <!-- This is the ONLY part that changes when navigating -->
+      <section class="stage" id="stage" aria-live="polite">
+        <p class="stage__placeholder">Loading&hellip;</p>
+      </section>
+    </main>
+
+    <!-- Bottom player bar: persistent, never re-rendered -->
+    <footer class="player">
+      <audio id="audioPlayer" preload="none"></audio>
+
+      <div class="player__track">
+        <img class="player__art" src="static/images/logo.svg" alt="Current song artwork" />
+        <div class="player__meta">
+          <span class="player__title" id="playerTitle">Song Title Placeholder</span>
+          <span class="player__artist" id="playerArtist">Artist Placeholder</span>
+        </div>
+      </div>
+
+      <div class="player__controls">
+        <button class="ctrl-btn" id="rewindBtn" aria-label="Rewind">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M10 12L19 6V18L10 12Z" fill="currentColor"/><path d="M2 12L11 6V18L2 12Z" fill="currentColor"/></svg>
+        </button>
+        <button class="ctrl-btn ctrl-btn--play" id="playBtn" aria-label="Play" data-state="paused">
+          <svg viewBox="0 0 24 24" fill="none" id="playIcon"><path d="M8 6V18L17 12Z" fill="currentColor"/></svg>
+        </button>
+        <button class="ctrl-btn" id="forwardBtn" aria-label="Fast forward">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M14 12L5 6V18L14 12Z" fill="currentColor"/><path d="M22 12L13 6V18L22 12Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <div class="player__spacer" aria-hidden="true"></div>
+    </footer>
+
+  </div>
+
+  <script src="static/app.js"></script>
+</body>
+</html>

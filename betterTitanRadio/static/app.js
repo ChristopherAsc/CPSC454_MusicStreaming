@@ -1,75 +1,155 @@
-const playButtons = document.querySelectorAll('[data-play-title]');
-const searchInput = document.querySelector('#song-search');
-const rows = document.querySelectorAll('[data-track-row]');
-const emptyState = document.querySelector('#empty-state');
-const playerTitle = document.querySelector('#player-title');
-const playerArtist = document.querySelector('#player-artist');
-const playerCover = document.querySelector('#player-cover');
-const heroTitle = document.querySelector('#hero-title');
-const heroMeta = document.querySelector('#hero-meta');
-const playToggle = document.querySelector('#play-toggle');
-let playIcon = document.querySelector('#play-icon');
-let pauseIcon = document.querySelector('#pause-icon');
-const progressBar = document.querySelector('#progress-bar');
+// ---------------------------------------------------------
+// app.js
+// Loads partial HTML into #stage without reloading base.html,
+// so the <audio> element and player bar are never destroyed.
+// ---------------------------------------------------------
 
-function setNowPlaying(title, artist) {
-    playerTitle.textContent = title;
-    playerArtist.textContent = artist;
-    playerCover.textContent = title.charAt(0);
-    heroTitle.textContent = title;
-    heroMeta.textContent = `${artist} · Streaming preview from the server library.`;
-    progressBar.style.width = '18%';
+const stage = document.getElementById("stage");
+
+const routes = {
+  search: "partials/search.html",
+  profile: "partials/profile.html",
+};
+
+let currentRoute = null;
+
+async function loadRoute(routeName) {
+  const url = routes[routeName];
+  if (!url) return;
+
+  // avoid re-fetching the same panel repeatedly
+  if (currentRoute === routeName) return;
+
+  stage.setAttribute("aria-busy", "true");
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to load ${url}: ${res.status}`);
+    const html = await res.text();
+    stage.innerHTML = html;
+    currentRoute = routeName;
+
+    // re-run any route-specific setup after injecting new markup
+    if (routeName === "profile") initProfilePanel();
+    if (routeName === "search") initSearchPanel();
+  } catch (err) {
+    stage.innerHTML = `<p class="stage__placeholder">Couldn't load this panel. ${err.message}</p>`;
+    console.error(err);
+  } finally {
+    stage.removeAttribute("aria-busy");
+  }
 }
 
-function setPlaybackState(isPlaying) {
-    if (!playToggle) {
-        return;
-    }
-
-    if (!playIcon || !pauseIcon) {
-        playToggle.innerHTML = `
-            <img id="play-icon" src="/static/images/play.svg" alt="Play" class="image-button">
-            <img id="pause-icon" src="/static/images/pause.svg" alt="Pause" style="display: none;" class="image-button">
-        `;
-        playIcon = playToggle.querySelector('#play-icon');
-        pauseIcon = playToggle.querySelector('#pause-icon');
-    }
-
-    if (!playIcon || !pauseIcon) {
-        return;
-    }
-
-    playIcon.style.display = isPlaying ? 'none' : 'block';
-    pauseIcon.style.display = isPlaying ? 'block' : 'none';
-    playIcon.hidden = isPlaying;
-    pauseIcon.hidden = !isPlaying;
-}
-
-playButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-        setNowPlaying(button.dataset.playTitle, button.dataset.playArtist);
-    });
+// ---- Navigation triggers ----
+document.querySelectorAll("[data-route]").forEach((el) => {
+  const routeName = el.dataset.route;
+  const trigger = el.tagName === "INPUT" ? "focus" : "click";
+  el.addEventListener(trigger, () => loadRoute(routeName));
 });
 
-playToggle.addEventListener('click', () => {
-    const isPlaying = playIcon.hidden;
-    setPlaybackState(!isPlaying);
+// ---- Search panel behavior ----
+function initSearchPanel() {
+  const input = document.getElementById("searchInput");
+  const resultList = document.getElementById("resultList");
+  if (!input || !resultList) return;
+
+  input.addEventListener("input", () => {
+    const query = input.value.trim();
+    resultList.innerHTML = query
+      ? `<li class="result-list__empty">No results yet for "${escapeHtml(query)}" — hook this up to your data source.</li>`
+      : "";
+  });
+}
+
+// ---- Profile panel behavior ----
+function initProfilePanel() {
+  const form = document.getElementById("profileForm");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      // wire this up to your actual auth/profile-save logic
+      console.log("Profile form submitted:", new FormData(form));
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      // wire this up to your actual logout logic
+      console.log("Logout clicked");
+    });
+  }
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ---------------------------------------------------------
+// Persistent audio player controls — lives in base.html,
+// never re-rendered, so playback survives navigation.
+// ---------------------------------------------------------
+
+const audio = document.getElementById("audioPlayer");
+const playBtn = document.getElementById("playBtn");
+const playIcon = document.getElementById("playIcon");
+const rewindBtn = document.getElementById("rewindBtn");
+const forwardBtn = document.getElementById("forwardBtn");
+
+const PLAY_ICON = `<path d="M8 6V18L17 12Z" fill="currentColor"/>`;
+const PAUSE_ICON = `<rect x="7" y="6" width="3.5" height="12" rx="1" fill="currentColor"/><rect x="13.5" y="6" width="3.5" height="12" rx="1" fill="currentColor"/>`;
+
+let isPlaying = false;
+
+function setPlaybackState(playing) {
+  isPlaying = playing;
+  playBtn?.setAttribute("data-state", playing ? "playing" : "paused");
+  playBtn?.setAttribute("aria-pressed", String(playing));
+  playBtn?.setAttribute("aria-label", playing ? "Pause" : "Play");
+  playIcon.innerHTML = playing ? PAUSE_ICON : PLAY_ICON;
+}
+
+playBtn?.addEventListener("click", () => {
+  const nextState = !isPlaying;
+  setPlaybackState(nextState);
+
+  if (nextState) {
+    audio?.play?.().catch(() => {
+      setPlaybackState(false);
+    });
+  } else {
+    audio?.pause?.();
+  }
+});
+
+rewindBtn?.addEventListener("click", () => {
+  console.log("Rewind clicked");
+});
+
+forwardBtn?.addEventListener("click", () => {
+  console.log("Fast forward clicked");
 });
 
 setPlaybackState(false);
 
-searchInput.addEventListener('input', () => {
-    const query = searchInput.value.trim().toLowerCase();
-    let visibleCount = 0;
+// ---------------------------------------------------------
+// Library list — persistent, rendered once on load
+// ---------------------------------------------------------
 
-    rows.forEach((row) => {
-        const text = `${row.dataset.title} ${row.dataset.artist}`.toLowerCase();
-        const isVisible = text.includes(query);
-        row.hidden = !isVisible;
-        if (isVisible) {
-            visibleCount += 1;
-        }
-    });
+function renderLibrary(items) {
+  const list = document.getElementById("libraryList");
+  if (!list) return;
+  list.innerHTML = items
+    .map((item) => `<li data-track-id="${item.id}">${escapeHtml(item.name)}</li>`)
+    .join("");
+}
 
-    emptyState.hidden = visibleCount !== 0;
-});
+// Placeholder data — replace with your real library source
+renderLibrary([
+  { id: 1, name: "Playlist One" },
+  { id: 2, name: "Playlist Two" },
+  { id: 3, name: "Liked Songs" },
+]);
