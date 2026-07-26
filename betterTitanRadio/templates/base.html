@@ -17,7 +17,8 @@
                     <h1>Better Titan Radio</h1>
                 </div>
             </div>
-
+            
+            /* ---------------------- these currently don't work ---------------------- */
             <nav class="nav-links">
                 <a class="active" href="#dashboard">Dashboard</a>
                 <a href="#library">Library</a>
@@ -36,10 +37,13 @@
             </section>
         </aside>
 
+        /* ---------------------------------------------------------------------------- */
+        /*                             the content goes here                            */
+        /* ---------------------------------------------------------------------------- */
         <main id="dashboard" class="content">
             {% block content %}{% endblock %}
         </main>
-
+        /* ---------------------------------------------------------------------------- */
         <footer class="player-bar" aria-label="Now playing">
             <div id="player-cover" class="mini-cover">T</div>
             <div class="player-meta">
