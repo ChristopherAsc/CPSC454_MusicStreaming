@@ -18,12 +18,10 @@
                 </div>
             </div>
             
-            /* ---------------------- these currently don't work ---------------------- */
+            {% comment %} /* ---------------------- these currently don't work ---------------------- */ {% endcomment %}
             <nav class="nav-links">
-                <a class="active" href="#dashboard">Dashboard</a>
-                <a href="#library">Library</a>
-                <a href="#upload">Upload</a>
-                <a href="#metrics">Metrics</a>
+                <a href="{% url 'home' %}">Dashboard</a>
+                <a href="{% url 'profile' %}">Profile</a>
                 <a href="/admin/">Admin</a>
             </nav>
 
@@ -37,13 +35,13 @@
             </section>
         </aside>
 
-        /* ---------------------------------------------------------------------------- */
+        {% comment %} /* ---------------------------------------------------------------------------- */
         /*                             the content goes here                            */
-        /* ---------------------------------------------------------------------------- */
+        /* ---------------------------------------------------------------------------- */ {% endcomment %}
         <main id="dashboard" class="content">
             {% block content %}{% endblock %}
         </main>
-        /* ---------------------------------------------------------------------------- */
+        {% comment %} /* ---------------------------------------------------------------------------- */ {% endcomment %}
         <footer class="player-bar" aria-label="Now playing">
             <div id="player-cover" class="mini-cover">T</div>
             <div class="player-meta">

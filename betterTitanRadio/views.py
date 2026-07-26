@@ -75,3 +75,9 @@ def home(request):
             'upload_queue': upload_queue,
         },
     )
+
+def profile(request):
+    return render(request, 'profile.html')
+
+def search(request):
+    return render(request, 'search.html')
