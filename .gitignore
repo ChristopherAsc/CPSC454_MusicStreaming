@@ -26,3 +26,16 @@ staticfiles/
 # Editors
 .vscode/
 .idea/
+# Python-generated cache files
+__pycache__/
+*.py[cod]
+
+# Local secrets and runtime files
+.env
+.venv/
+media/
+db.sqlite3
+staticfiles/
+
+# Temporary backup files
+*.bak
