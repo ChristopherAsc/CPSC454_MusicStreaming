@@ -1,0 +1,35 @@
+<h1>Better Titan Radio</h1>
+
+<p>
+    <a href="{% url 'radio:upload' %}">
+        Upload music
+    </a>
+</p>
+
+{% for track in tracks %}
+    <article>
+        <h2>{{ track.display_title }}</h2>
+
+        <p>
+            Artist: {{ track.display_artist }}<br>
+            Album: {{ track.album|default:"Unknown album" }}<br>
+            Year: {{ track.year|default:"Unknown" }}<br>
+            Genre: {{ track.genre|default:"Unknown" }}
+        </p>
+
+        <audio controls preload="metadata">
+            <source
+                src="{% url 'radio:stream' track.id %}"
+                type="{{ track.mime_type }}"
+            >
+        </audio>
+
+        <p>
+            <a href="{% url 'radio:download' track.id %}">
+                Download
+            </a>
+        </p>
+    </article>
+{% empty %}
+    <p>No music has been uploaded.</p>
+{% endfor %}

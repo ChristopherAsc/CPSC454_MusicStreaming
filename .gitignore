@@ -1,23 +1,28 @@
-# ignore the venv file (i named my venv file .venv)
-
-*.venv
-
-
-#ignoring sqlite3 file that is generated with django
-
-*.sqlite3
-
-
-#ignore dev vscode settings
-
-*.vscode
-
-#ignore local environment/secrets file
-
+# Passwords and environment variables
 .env
+.env.*
+!.env.example
 
+# Virtual environments
+.venv/
+venv/
 
-# ignore Python files generated when Django runs
-
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Local databases and uploaded files
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+
+# AWS and SSH keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editors
+.vscode/
+.idea/
