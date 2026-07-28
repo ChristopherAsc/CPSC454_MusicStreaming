@@ -137,32 +137,31 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
-# storage S3
+# Media files (uploaded tracks)
+# Uses S3 when AWS_STORAGE_BUCKET_NAME is set, so every developer/instance
+# reads and writes the same files instead of each machine's local disk.
 
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-        "OPTIONS": {
-            "access_key": os.environ['AWS_ACCESS_KEY_ID'],
-            "secret_key": os.environ['AWS_SECRET_ACCESS_KEY'],
-            "bucket_name": os.environ['AWS_STORAGE_BUCKET_NAME'],
-            "region_name": os.environ['AWS_S3_REGION_NAME'],
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+
+if AWS_STORAGE_BUCKET_NAME:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3.S3Storage',
+            'OPTIONS': {
+                'access_key': os.environ['AWS_ACCESS_KEY_ID'],
+                'secret_key': os.environ['AWS_SECRET_ACCESS_KEY'],
+                'bucket_name': AWS_STORAGE_BUCKET_NAME,
+                'region_name': os.environ.get('AWS_S3_REGION_NAME', 'us-east-1'),
+                'file_overwrite': False,
+                'default_acl': None,
+                'querystring_auth': True,
+                'signature_version': 's3v4',
+            },
         },
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
-
-
-    # DATABASES = {
-    #     'default': {
-    #         'ENGINE': 'django.db.backends.mysql',
-    #         'NAME': os.environ['DB_NAME'],
-    #         'USER': os.environ['DB_USER'],
-    #         'PASSWORD': os.environ['DB_PASSWORD'],
-    #         'HOST': os.environ['DB_HOST'],
-    #         'PORT': os.environ.get('DB_PORT', '3306'),
-    #     }
-    # }
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
+else:
+    MEDIA_URL = 'media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
