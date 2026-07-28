@@ -79,12 +79,12 @@ def _calculate_sha256(uploaded_file):
     return digest.hexdigest()
 
 
-def _extract_metadata(file_path):
-    path = Path(file_path)
-    audio = MutagenFile(path, easy=True)
+def _extract_metadata(fileobj, filename):
+    stem = Path(filename).stem
+    audio = MutagenFile(fileobj, easy=True)
 
     if audio is None:
-        return {"title": path.stem}
+        return {"title": stem}
 
     tags = audio.tags or {}
     info = audio.info
@@ -105,7 +105,7 @@ def _extract_metadata(file_path):
     bitrate = getattr(info, "bitrate", None)
 
     return {
-        "title": _first_tag(tags, "title") or path.stem,
+        "title": _first_tag(tags, "title") or stem,
         "artist": _first_tag(tags, "artist"),
         "album": _first_tag(tags, "album"),
         "album_artist": _first_tag(
@@ -172,7 +172,11 @@ def _create_track(uploaded_file):
     metadata_warning = None
 
     try:
-        metadata = _extract_metadata(track.file.path)
+        with track.file.open("rb") as fileobj:
+            metadata = _extract_metadata(
+                fileobj,
+                track.original_filename,
+            )
 
         valid_fields = {
             field.name
