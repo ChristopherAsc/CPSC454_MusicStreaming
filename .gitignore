@@ -39,3 +39,10 @@ staticfiles/
 
 # Temporary backup files
 *.bak
+
+
+temp
+
+# ignore tracks 
+
+tracks
