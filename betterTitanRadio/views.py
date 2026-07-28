@@ -3,8 +3,8 @@ import mimetypes
 import re
 from pathlib import Path
 
-from django.http import FileResponse, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404
+from django.http import FileResponse, HttpResponse, JsonResponse, StreamingHttpResponse
+from django.shortcuts import get_object_or_404, render
 from django.utils.html import escape
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import (
@@ -26,6 +26,23 @@ ALLOWED_AUDIO_EXTENSIONS = {
     ".ogg",
     ".opus",
 }
+
+
+def _read_file_range(fileobj, start, length, chunk_size=8192):
+    fileobj.seek(start)
+    remaining = length
+
+    try:
+        while remaining > 0:
+            chunk = fileobj.read(min(chunk_size, remaining))
+
+            if not chunk:
+                break
+
+            remaining -= len(chunk)
+            yield chunk
+    finally:
+        fileobj.close()
 
 
 def _first_tag(tags, *keys):
@@ -234,105 +251,101 @@ def _serialize_track(request, track):
     }
 
 
+def _format_duration(seconds):
+    if seconds is None:
+        return "--:--"
+
+    total_seconds = round(seconds)
+    minutes, remaining_seconds = divmod(total_seconds, 60)
+
+    return f"{minutes}:{remaining_seconds:02d}"
+
+
+def _format_file_size(size):
+    if not size:
+        return "0 MB"
+
+    return f"{size / (1024 * 1024):.1f} MB"
+
+
+def _track_format(track):
+    extension = Path(track.original_filename).suffix
+
+    return extension.lstrip(".").upper() or "Audio"
+
+
+def _dashboard_track(request, track, index):
+    accents = [
+        "#ef476f",
+        "#06d6a0",
+        "#ffd166",
+        "#118ab2",
+        "#9b5de5",
+    ]
+
+    return {
+        "id": track.id,
+        "title": track.display_title,
+        "artist": track.display_artist,
+        "album": track.album or "Unknown album",
+        "source": track.file.name,
+        "format": _track_format(track),
+        "size": _format_file_size(track.file_size),
+        "duration": _format_duration(track.duration_seconds),
+        "status": "Ready",
+        "accent": accents[index % len(accents)],
+        "mime_type": track.mime_type or "audio/mpeg",
+        "stream_url": f"/tracks/{track.id}/stream/",
+        "download_url": f"/tracks/{track.id}/download/",
+    }
+
+
 @require_GET
 def home(request):
-    tracks = Track.objects.order_by("-id")
+    queryset = Track.objects.order_by("-id")
+    tracks = [
+        _dashboard_track(request, track, index)
+        for index, track in enumerate(queryset)
+    ]
+    total_size = sum(track.file_size for track in queryset)
 
-    sections = []
+    metrics = [
+        {
+            "label": "Stream latency",
+            "value": "Local",
+            "trend": "Served by Django stream endpoint",
+        },
+        {
+            "label": "Library size",
+            "value": f"{len(tracks)} tracks",
+            "trend": _format_file_size(total_size),
+        },
+        {
+            "label": "Upload support",
+            "value": "Ready",
+            "trend": "Audio files saved with metadata",
+        },
+        {
+            "label": "Server status",
+            "value": "Online",
+            "trend": "SQLite fallback for local dev",
+        },
+    ]
 
-    for track in tracks:
-        title = escape(
-            track.title or track.original_filename
-        )
-        artist = escape(
-            track.artist or "Unknown artist"
-        )
-        album = escape(
-            track.album or "Unknown album"
-        )
-        genre = escape(
-            track.genre or "Unknown genre"
-        )
-        year = escape(
-            str(track.year)
-            if track.year
-            else "Unknown"
-        )
-        mime_type = escape(
-            track.mime_type or "audio/mpeg"
-        )
+    upload_queue = [
+        {"name": "Upload form", "state": "Available"},
+        {"name": "JSON API", "state": "Available"},
+        {"name": "Stream/download", "state": "Available"},
+    ]
 
-        sections.append(
-            f"""
-            <article style="
-                border: 1px solid #cccccc;
-                margin: 16px 0;
-                padding: 16px;
-            ">
-                <h2>{title}</h2>
-
-                <p>
-                    <strong>Artist:</strong> {artist}<br>
-                    <strong>Album:</strong> {album}<br>
-                    <strong>Genre:</strong> {genre}<br>
-                    <strong>Year:</strong> {year}
-                </p>
-
-                <audio controls preload="metadata">
-                    <source
-                        src="/tracks/{track.id}/stream/"
-                        type="{mime_type}"
-                    >
-                </audio>
-
-                <p>
-                    <a href="/tracks/{track.id}/download/">
-                        Download
-                    </a>
-                </p>
-            </article>
-            """
-        )
-
-    library = (
-        "\n".join(sections)
-        if sections
-        else "<p>No music has been uploaded yet.</p>"
-    )
-
-    return HttpResponse(
-        f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta
-                name="viewport"
-                content="width=device-width, initial-scale=1"
-            >
-            <title>Better Titan Radio</title>
-        </head>
-
-        <body style="
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 0 20px;
-            font-family: Arial, sans-serif;
-        ">
-            <h1>Better Titan Radio</h1>
-
-            <p>
-                <a href="/upload/">Upload music</a>
-                |
-                <a href="/api/tracks/">View JSON API</a>
-                |
-                <a href="/test/">Test server</a>
-            </p>
-
-            {library}
-        </body>
-        </html>
-        """
+    return render(
+        request,
+        "home.html",
+        {
+            "tracks": tracks,
+            "metrics": metrics,
+            "upload_queue": upload_queue,
+        },
     )
 
 
@@ -536,18 +549,59 @@ def api_upload(request):
     )
 
 
-@require_GET
+@require_http_methods(["GET", "HEAD"])
 def stream_track(request, track_id):
     track = get_object_or_404(Track, pk=track_id)
+    content_type = track.mime_type or "audio/mpeg"
+    file_size = track.file_size
+    range_header = request.headers.get("Range", "")
+
+    if range_header.startswith("bytes=") and file_size:
+        range_value = range_header.removeprefix("bytes=").split(",", 1)[0]
+        start_text, _, end_text = range_value.partition("-")
+
+        try:
+            if start_text:
+                start = int(start_text)
+                end = int(end_text) if end_text else file_size - 1
+            else:
+                suffix_length = int(end_text)
+                start = max(file_size - suffix_length, 0)
+                end = file_size - 1
+        except ValueError:
+            start = 0
+            end = file_size - 1
+
+        start = max(start, 0)
+        end = min(end, file_size - 1)
+
+        if start > end:
+            response = HttpResponse(status=416)
+            response["Content-Range"] = f"bytes */{file_size}"
+            return response
+
+        length = end - start + 1
+        response = StreamingHttpResponse(
+            _read_file_range(track.file.open("rb"), start, length),
+            status=206,
+            content_type=content_type,
+        )
+        response["Content-Length"] = str(length)
+        response["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+        response["Accept-Ranges"] = "bytes"
+        response["Content-Disposition"] = (
+            f'inline; filename="{track.original_filename}"'
+        )
+
+        return response
 
     response = FileResponse(
         track.file.open("rb"),
-        content_type=(
-            track.mime_type
-            or "audio/mpeg"
-        ),
+        content_type=content_type,
     )
 
+    response["Accept-Ranges"] = "bytes"
+    response["Content-Length"] = str(file_size)
     response["Content-Disposition"] = (
         f'inline; filename="{track.original_filename}"'
     )
@@ -568,4 +622,3 @@ def download_track(request, track_id):
             or "audio/mpeg"
         ),
     )
-

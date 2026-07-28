@@ -9,7 +9,7 @@
         <p class="eyebrow">Cloud music dashboard</p>
         <h2>Stream, upload, download, and monitor your personal Titan music server.</h2>
     </div>
-    <form class="search-form" role="search" action="{% url 'search' %}">
+    <form class="search-form" role="search" onsubmit="return false;">
         <label for="song-search">Search</label>
         <input id="song-search" type="search" placeholder="Search songs or artists">
     </form>
@@ -21,8 +21,12 @@
         <h2 id="hero-title">Titan Nights</h2>
         <p id="hero-meta">Campus Radio · Ready to stream from the server library.</p>
         <div class="hero-actions">
-            <button type="button" data-play-title="Titan Nights" data-play-artist="Campus Radio">Play track</button>
-            <button class="secondary-button" type="button">Download</button>
+            {% if tracks %}
+                <button type="button" data-play-title="{{ tracks.0.title }}" data-play-artist="{{ tracks.0.artist }}" data-stream-url="{{ tracks.0.stream_url }}">Play latest</button>
+                <a class="secondary-button" href="{{ tracks.0.download_url }}">Download latest</a>
+            {% else %}
+                <button class="secondary-button" type="button" data-upload-open>Upload music</button>
+            {% endif %}
         </div>
     </div>
     <div class="visualizer" aria-hidden="true">
@@ -63,7 +67,7 @@
                 <span role="columnheader">Actions</span>
             </div>
             {% for track in tracks %}
-                <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" role="row">
+                <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" data-stream-url="{{ track.stream_url }}" role="row">
                     <div class="track-main" role="cell">
                         <div class="cover" style="--accent: {{ track.accent }};">
                             <span>{{ track.title|slice:":1" }}</span>
@@ -77,9 +81,9 @@
                     <span role="cell">{{ track.format }}</span>
                     <span class="status-pill {{ track.status|lower }}" role="cell">{{ track.status }}</span>
                     <div class="row-actions" role="cell">
-                        <button type="button" data-play-title="{{ track.title }}" data-play-artist="{{ track.artist }}">Play</button>
-                        <button class="icon-button" type="button" aria-label="Download {{ track.title }}">Down</button>
-                        <button class="danger-button" type="button" aria-label="Remove {{ track.title }}">Remove</button>
+                        <button type="button" data-play-title="{{ track.title }}" data-play-artist="{{ track.artist }}" data-stream-url="{{ track.stream_url }}">Play</button>
+                        <a class="icon-button" href="{{ track.download_url }}" aria-label="Download {{ track.title }}">Down</a>
+                        <a class="danger-button" href="{% url 'api_tracks' %}" aria-label="View API data for {{ track.title }}">API</a>
                     </div>
                 </article>
             {% endfor %}
@@ -91,12 +95,11 @@
         <section class="upload-panel">
             <p class="eyebrow">Folder upload</p>
             <h2>Sync a Music Folder</h2>
-            <label class="drop-zone" for="folder-upload">
-                <strong>Choose music folder</strong>
-                <span>Frontend placeholder for browser-based folder upload.</span>
-                <input id="folder-upload" type="file" webkitdirectory directory multiple>
-            </label>
-            <button class="wide-button" type="button">Start upload scan</button>
+            <button class="drop-zone" type="button" data-upload-open>
+                <strong>Open upload page</strong>
+                <span>Upload audio files, extract metadata, and add them to the streamable library.</span>
+            </button>
+            <button class="wide-button" type="button" data-upload-open>Upload music</button>
         </section>
 
         <section class="queue-panel">
@@ -115,6 +118,28 @@
                 {% endfor %}
             </ul>
         </section>
-    </div>
+    </aside>
 </section>
+
+<div id="upload-modal" class="modal-backdrop" hidden>
+    <section class="upload-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
+        <div class="modal-header">
+            <div>
+                <p class="eyebrow">Upload music</p>
+                <h2 id="upload-modal-title">Add Tracks To Library</h2>
+            </div>
+            <button class="modal-close" type="button" aria-label="Close upload window" data-upload-close>Close</button>
+        </div>
+
+        <form class="modal-upload-form" method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            <label class="drop-zone" for="modal-file-upload">
+                <strong>Choose an audio file</strong>
+                <span>MP3, WAV, FLAC, M4A, AAC, OGG, or OPUS files are supported.</span>
+                <input id="modal-file-upload" type="file" name="file" accept="audio/*" required>
+            </label>
+            <button class="wide-button" type="submit">Upload selected file</button>
+        </form>
+    </section>
+</div>
 {% endblock %}
