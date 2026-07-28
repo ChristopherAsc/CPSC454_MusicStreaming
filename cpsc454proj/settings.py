@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'betterTitanRadio',
+    'storages'
 ]
 
 MIDDLEWARE = [
@@ -90,6 +91,7 @@ if os.environ.get('DB_HOST'):
         }
     }
 else:
+    print("the database wasn't found.")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -133,3 +135,34 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+# storage S3
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": os.environ['AWS_ACCESS_KEY_ID'],
+            "secret_key": os.environ['AWS_SECRET_ACCESS_KEY'],
+            "bucket_name": os.environ['AWS_STORAGE_BUCKET_NAME'],
+            "region_name": os.environ['AWS_S3_REGION_NAME'],
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+
+
+    # DATABASES = {
+    #     'default': {
+    #         'ENGINE': 'django.db.backends.mysql',
+    #         'NAME': os.environ['DB_NAME'],
+    #         'USER': os.environ['DB_USER'],
+    #         'PASSWORD': os.environ['DB_PASSWORD'],
+    #         'HOST': os.environ['DB_HOST'],
+    #         'PORT': os.environ.get('DB_PORT', '3306'),
+    #     }
+    # }
