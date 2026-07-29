@@ -1171,6 +1171,101 @@ button,
   }
 }
 
+@media (max-width: 720px) {
+  .app-shell {
+    padding-bottom: 190px;
+  }
+
+  .player-bar {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px 52px 44px;
+    grid-template-areas:
+      "cover meta previous play next"
+      "progress progress progress progress time"
+      "volume volume volume volume volume";
+    gap: 0.75rem;
+    min-height: 176px;
+    padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
+  }
+
+  .mini-cover {
+    grid-area: cover;
+    height: 44px;
+    width: 44px;
+  }
+
+  .player-meta {
+    grid-area: meta;
+    min-width: 0;
+  }
+
+  .player-meta strong,
+  .player-meta span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #previous-track {
+    grid-area: previous;
+  }
+
+  #play-toggle {
+    grid-area: play;
+  }
+
+  #next-track {
+    grid-area: next;
+  }
+
+  .player-bar .primary-control {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .player-bar .primary-control img,
+  .player-bar .primary-control#play-toggle img {
+    height: 40px;
+    width: 40px;
+  }
+
+  .progress {
+    grid-area: progress;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .time-code {
+    grid-area: time;
+    justify-self: end;
+    white-space: nowrap;
+  }
+
+  .volume-control {
+    grid-area: volume;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .volume-control input[type="range"] {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell {
+    padding-bottom: 205px;
+  }
+
+  .player-bar {
+    grid-template-columns: 40px minmax(0, 1fr) 40px 48px 40px;
+    gap: 0.65rem;
+    min-height: 190px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
 /* Settings page */
 
 .settings-copy {
