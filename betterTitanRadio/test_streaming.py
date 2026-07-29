@@ -215,3 +215,98 @@ class FolderUploadTests(TempMediaMixin, TestCase):
 
     def test_get_is_rejected(self):
         self.assertEqual(self.client.get(self.URL).status_code, 405)
+
+
+class ClearLibraryTests(TempMediaMixin, TestCase):
+    """The settings page's 'clear song database' action."""
+
+    URL = '/api/library/clear/'
+
+    def _make_track(self, name, payload):
+        return Track.objects.create(
+            file=SimpleUploadedFile(name, payload, content_type='audio/mpeg'),
+            original_filename=name,
+            title=name,
+            file_size=len(payload),
+            mime_type='audio/mpeg',
+            sha256=hashlib.sha256(payload).hexdigest(),
+        )
+
+    def setUp(self):
+        self.tracks = [
+            self._make_track('one.mp3', b'first'),
+            self._make_track('two.mp3', b'second'),
+        ]
+
+    def test_deletes_every_row(self):
+        response = self.client.post(self.URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['deleted'], 2)
+        self.assertEqual(Track.objects.count(), 0)
+
+    def test_deletes_the_files_too(self):
+        # A bulk queryset delete would drop the rows and orphan these files.
+        storage = self.tracks[0].file.storage
+        names = [track.file.name for track in self.tracks]
+        for name in names:
+            self.assertTrue(storage.exists(name))
+
+        self.client.post(self.URL)
+
+        for name in names:
+            self.assertFalse(storage.exists(name), f'{name} was left behind')
+
+    def test_clearing_an_empty_library_is_harmless(self):
+        self.client.post(self.URL)
+        response = self.client.post(self.URL)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['deleted'], 0)
+
+    def test_get_cannot_clear_the_library(self):
+        # A destructive action must not be reachable by navigating to a URL.
+        response = self.client.get(self.URL)
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(Track.objects.count(), 2)
+
+    def test_csrf_is_enforced(self):
+        # Unlike the upload endpoints, this one is not csrf_exempt.
+        csrf_client = self.client_class(enforce_csrf_checks=True)
+        response = csrf_client.post(self.URL)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Track.objects.count(), 2)
+
+
+class SettingsPageTests(TempMediaMixin, TestCase):
+    def test_page_renders_with_the_clear_button(self):
+        response = self.client.get('/settings/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Clear Song Library')
+        self.assertContains(response, 'id="clear-library"')
+        self.assertContains(response, 'id="clear-modal"')
+        self.assertContains(response, 'csrfmiddlewaretoken')
+
+    def test_button_is_disabled_when_there_is_nothing_to_clear(self):
+        response = self.client.get('/settings/')
+        self.assertContains(response, 'Library is already empty')
+
+    def test_page_reports_the_track_count(self):
+        payload = b'a track'
+        Track.objects.create(
+            file=SimpleUploadedFile('x.mp3', payload, content_type='audio/mpeg'),
+            original_filename='x.mp3',
+            file_size=len(payload),
+            sha256=hashlib.sha256(payload).hexdigest(),
+        )
+
+        response = self.client.get('/settings/')
+        self.assertEqual(response.context['track_count'], 1)
+        self.assertContains(response, 'Clear song database')
+
+    def test_sidebar_links_to_settings(self):
+        response = self.client.get('/')
+        self.assertContains(response, 'href="/settings/"')

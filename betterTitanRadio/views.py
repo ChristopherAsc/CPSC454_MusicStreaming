@@ -376,6 +376,61 @@ def home(request):
 
 
 @require_GET
+def settings_page(request):
+    queryset = Track.objects.order_by("-id")
+
+    return render(
+        request,
+        "settings.html",
+        {
+            "track_count": queryset.count(),
+            "library_size": _format_file_size(
+                sum(track.file_size for track in queryset)
+            ),
+        },
+    )
+
+
+@require_POST
+def api_clear_library(request):
+    """Delete every track, and the audio files behind them.
+
+    Deliberately NOT csrf_exempt, unlike the upload endpoints: this destroys the
+    whole library, so it must be reachable only from a form this site rendered.
+
+    Files are removed one at a time rather than with a bulk queryset delete,
+    because a bulk delete drops the rows without touching storage and would
+    leave every audio file orphaned on disk.
+    """
+    tracks = list(Track.objects.all())
+    file_errors = []
+
+    for track in tracks:
+        try:
+            track.file.delete(save=False)
+        except Exception as exc:
+            # Losing a file is not a reason to keep its row; record and continue.
+            file_errors.append(f"{track.original_filename}: {exc}")
+
+        track.delete()
+
+    response = {
+        "deleted": len(tracks),
+        "message": (
+            f"Cleared {len(tracks)} track{'' if len(tracks) == 1 else 's'} "
+            "from the library."
+            if tracks
+            else "The library was already empty."
+        ),
+    }
+
+    if file_errors:
+        response["file_errors"] = file_errors
+
+    return JsonResponse(response)
+
+
+@require_GET
 def test(request):
     return JsonResponse(
         {

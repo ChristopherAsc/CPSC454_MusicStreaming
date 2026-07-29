@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<header class="topbar">
+    <div>
+        <p class="eyebrow">Server configuration</p>
+        <h2>Settings</h2>
+    </div>
+</header>
+
+<section class="workspace-grid">
+    <section class="library-panel" aria-labelledby="danger-heading">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Danger zone</p>
+                <h2 id="danger-heading">Clear Song Library</h2>
+            </div>
+            <span>{{ track_count }} track{{ track_count|pluralize }}</span>
+        </div>
+
+        <p class="settings-copy">
+            Removes every track from the database and deletes the audio files
+            behind them. This cannot be undone &mdash; uploads would have to be
+            done again from the original files.
+        </p>
+
+        <dl class="settings-facts">
+            <div>
+                <dt>Tracks</dt>
+                <dd>{{ track_count }}</dd>
+            </div>
+            <div>
+                <dt>Storage used</dt>
+                <dd>{{ library_size }}</dd>
+            </div>
+        </dl>
+
+        {% csrf_token %}
+        <div id="clear-status" class="upload-status" role="status" aria-live="polite" hidden></div>
+
+        <button
+            class="danger-button wide-button"
+            type="button"
+            id="clear-library"
+            data-track-count="{{ track_count }}"
+            {% if not track_count %}disabled{% endif %}
+        >
+            {% if track_count %}
+                Clear song database
+            {% else %}
+                Library is already empty
+            {% endif %}
+        </button>
+    </section>
+</section>
+
+{% comment %}
+    The confirmation the button opens. Deleting the whole library is
+    irreversible, so it is gated behind an explicit second action rather than
+    firing straight from the click.
+{% endcomment %}
+<div id="clear-modal" class="modal-backdrop" hidden>
+    <section class="upload-modal" role="alertdialog" aria-modal="true"
+             aria-labelledby="clear-modal-title" aria-describedby="clear-modal-body">
+        <div class="modal-header">
+            <div>
+                <p class="eyebrow">This cannot be undone</p>
+                <h2 id="clear-modal-title">Clear the song database?</h2>
+            </div>
+            <button class="modal-close" type="button" aria-label="Cancel" data-clear-cancel>Close</button>
+        </div>
+
+        <p id="clear-modal-body" class="settings-copy">
+            All <strong id="clear-modal-count">{{ track_count }}</strong>
+            track{{ track_count|pluralize }} will be deleted from the database,
+            and their audio files removed from storage. Anything currently
+            playing will stop.
+        </p>
+
+        <div class="upload-status-actions">
+            <button class="danger-button" type="button" data-clear-confirm>
+                Yes, delete everything
+            </button>
+            <button type="button" data-clear-cancel>Cancel</button>
+        </div>
+    </section>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'settings.js' %}?v=1"></script>
+{% endblock %}

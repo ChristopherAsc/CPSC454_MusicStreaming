@@ -29,6 +29,7 @@
                 <a href="{% url 'api_tracks' %}">JSON API</a>
                 <a href="{% url 'test' %}">Test</a>
                 <a href="/admin/">Admin</a>
+                <a href="{% url 'settings' %}">Settings</a>
             </nav>
         </aside>
 
@@ -67,6 +68,7 @@
         </footer>
     </div>
     <script src="{% static 'pcm_player.js' %}?v=2"></script>
-    <script src="{% static 'app.js' %}?v=6"></script>
+    <script src="{% static 'app.js' %}?v=7"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

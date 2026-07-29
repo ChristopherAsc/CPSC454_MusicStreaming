@@ -7,6 +7,13 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("test/", views.test, name="test"),
     path("upload/", views.upload_page, name="upload"),
+    path("settings/", views.settings_page, name="settings"),
+
+    path(
+        "api/library/clear/",
+        views.api_clear_library,
+        name="api_clear_library",
+    ),
 
     path(
         "api/tracks/",

@@ -360,14 +360,14 @@ async function handleInput(){
 
 let debounceTimer;
 
-searchInput.addEventListener("input", () => {
+searchInput?.addEventListener("input", () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         handleInput();
     }, 100);
 });
 
-dropdown.addEventListener("click", (event) => {
+dropdown?.addEventListener("click", (event) => {
     const item = event.target.closest("li");
     if (!item) return;
 
@@ -382,7 +382,7 @@ document.addEventListener("click", (event) => {
     }
 })
 
-searchInput.addEventListener("keydown", (event)=> {
+searchInput?.addEventListener("keydown", (event)=> {
     if(event.key === "Escape") {
         dropdown.hidden = true;
         searchInput.blur();
