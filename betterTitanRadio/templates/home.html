@@ -132,13 +132,14 @@
             <button class="modal-close" type="button" aria-label="Close upload window" data-upload-close>Close</button>
         </div>
 
-        <form class="modal-upload-form" method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+        <form class="modal-upload-form" method="post" action="{% url 'api_upload' %}" enctype="multipart/form-data" data-upload-form>
             {% csrf_token %}
             <label class="drop-zone" for="modal-file-upload">
                 <strong>Choose an audio file</strong>
                 <span>MP3, WAV, FLAC, M4A, AAC, OGG, or OPUS files are supported.</span>
                 <input id="modal-file-upload" type="file" name="file" accept="audio/*" required>
             </label>
+            <div id="upload-status" class="upload-status" role="status" aria-live="polite" hidden></div>
             <button class="wide-button" type="submit">Upload selected file</button>
         </form>
     </section>

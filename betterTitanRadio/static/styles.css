@@ -1090,6 +1090,54 @@ button,
   max-width: 100%;
 }
 
+.upload-status {
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.55rem;
+  line-height: 1.45;
+  padding: 0.85rem;
+}
+
+.upload-status strong {
+  color: var(--text);
+}
+
+.upload-status span {
+  color: var(--text-dim);
+}
+
+.upload-status.is-pending {
+  background: rgba(91, 140, 244, 0.12);
+  border-color: rgba(91, 140, 244, 0.42);
+}
+
+.upload-status.is-success {
+  background: rgba(6, 214, 160, 0.12);
+  border-color: rgba(6, 214, 160, 0.42);
+}
+
+.upload-status.is-error {
+  background: rgba(255, 138, 138, 0.12);
+  border-color: rgba(255, 138, 138, 0.42);
+}
+
+.upload-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.upload-status-actions button {
+  min-height: 36px;
+  padding: 0.55rem 0.75rem;
+}
+
+.upload-status-actions button:last-child {
+  background: #252b37;
+  color: var(--text);
+}
+
 @keyframes bounce {
   0%, 100% {
     transform: scaleY(0.7);

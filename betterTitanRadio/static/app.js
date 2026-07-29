@@ -15,6 +15,8 @@ const progressRange = document.querySelector("#progress-range");
 const volumeRange = document.querySelector("#volume-range");
 const timeCode = document.querySelector("#time-code");
 const uploadModal = document.querySelector("#upload-modal");
+const uploadForm = document.querySelector("[data-upload-form]");
+const uploadStatus = document.querySelector("#upload-status");
 const dropdown = document.querySelector("#search-dropdown")
 
 const audioPlayer = document.querySelector("#audio-player") || new Audio();
@@ -414,6 +416,107 @@ document.querySelectorAll("[data-upload-close]").forEach((trigger) => {
 uploadModal?.addEventListener("click", (event) => {
     if (event.target === uploadModal) {
         uploadModal.hidden = true;
+    }
+});
+
+function setUploadStatus(type, message, actions = "") {
+    if (!uploadStatus) {
+        return;
+    }
+
+    uploadStatus.hidden = false;
+    uploadStatus.className = `upload-status ${type ? `is-${type}` : ""}`;
+    uploadStatus.innerHTML = `
+        <strong>${escapeHtml(message)}</strong>
+        ${actions}
+    `;
+}
+
+function escapeHtml(value) {
+    const element = document.createElement("span");
+    element.textContent = value;
+
+    return element.innerHTML;
+}
+
+function resetUploadStatus() {
+    if (!uploadStatus) {
+        return;
+    }
+
+    uploadStatus.hidden = true;
+    uploadStatus.className = "upload-status";
+    uploadStatus.innerHTML = "";
+}
+
+uploadForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const submitButton = uploadForm.querySelector("[type='submit']");
+    const formData = new FormData(uploadForm);
+
+    if (!formData.get("file")) {
+        setUploadStatus("error", "Choose an audio file before uploading.");
+        return;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Uploading...";
+    }
+
+    setUploadStatus("pending", "Uploading music to the library...");
+
+    try {
+        const response = await fetch(uploadForm.action, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Upload failed.");
+        }
+
+        const track = data.track || {};
+        const title = escapeHtml(track.title || "Track");
+        const artist = escapeHtml(track.artist || "Unknown artist");
+        const message = data.created
+            ? "Music uploaded successfully."
+            : "That exact file was already uploaded.";
+
+        setUploadStatus(
+            "success",
+            message,
+            `
+                <span>${title} - ${artist}</span>
+                <div class="upload-status-actions">
+                    <button type="button" data-upload-refresh>View updated library</button>
+                    <button type="button" data-upload-again>Upload another</button>
+                </div>
+            `,
+        );
+    } catch (error) {
+        setUploadStatus("error", error.message || "Upload failed.");
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = "Upload selected file";
+        }
+    }
+});
+
+uploadStatus?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-upload-refresh]")) {
+        window.location.reload();
+    }
+
+    if (event.target.closest("[data-upload-again]")) {
+        uploadForm?.reset();
+        resetUploadStatus();
     }
 });
 
