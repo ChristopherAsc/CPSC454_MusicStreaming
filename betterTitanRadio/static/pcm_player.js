@@ -28,6 +28,21 @@ const STATUS_TEXT = {
 };
 const HEADER_SIZE = 8;
 
+// How playback is scheduled.
+//
+// The server delivers a whole song in about a second, so PCM arrives as
+// thousands of small messages. Scheduling one AudioBufferSourceNode per message
+// would connect thousands of live nodes to the graph at once, and the audio
+// render thread walks every connected node each 128-sample quantum -- enough to
+// miss its deadline and stall playback moments after the transfer starts.
+//
+// So PCM is scheduled in blocks of a useful size, and only just far enough
+// ahead of the play head to survive a stutter. For a four-minute track that is
+// roughly twenty live nodes instead of nine thousand. This also bounds the work
+// a seek does: it schedules the next few seconds, not the rest of the song.
+const SCHEDULE_BLOCK_SECONDS = 0.5;
+const SCHEDULE_AHEAD_SECONDS = 10;
+
 function concatBytes(a, b) {
     if (a.length === 0) return b;
     if (b.length === 0) return a;
@@ -311,29 +326,43 @@ class PcmStreamPlayer extends EventTarget {
         return buffer;
     }
 
-    // Schedule everything received but not yet scheduled, as one source placed
-    // on the timeline so it lines up seamlessly with what is already playing.
+    // Schedule buffered audio in blocks, up to SCHEDULE_AHEAD_SECONDS past the
+    // play head. Each block is placed on the timeline so it abuts the previous
+    // one exactly, giving gapless playback. Called both when PCM arrives and on
+    // every animation frame, so the horizon keeps advancing with the clock.
     _pump() {
-        if (!this.playing || this.scheduledFrame >= this.totalFrames) return;
-        const f0 = this.scheduledFrame;
-        const f1 = this.totalFrames;
+        if (!this.playing || !this.rate) return;
 
-        let startAt = this.anchorTime + (f0 - this.anchorFrame) / this.rate;
-        if (startAt < this.audioCtx.currentTime) {
-            // Fell behind the clock (an underrun); re-anchor so the reported
-            // position stays true.
-            this.anchorFrame = f0;
-            this.anchorTime = this.audioCtx.currentTime;
-            startAt = this.audioCtx.currentTime;
+        const blockFrames = Math.max(1, Math.round(SCHEDULE_BLOCK_SECONDS * this.rate));
+        const horizonFrame = this._currentFrame() + SCHEDULE_AHEAD_SECONDS * this.rate;
+
+        while (this.scheduledFrame < this.totalFrames
+               && this.scheduledFrame < horizonFrame) {
+            const f0 = this.scheduledFrame;
+            const f1 = Math.min(f0 + blockFrames, this.totalFrames);
+
+            // At the buffering frontier, wait for a whole block rather than
+            // emitting a sliver per network packet. The tail of a fully
+            // received stream is the one short block worth scheduling.
+            if (f1 - f0 < blockFrames && !this.fullyBuffered) return;
+
+            let startAt = this.anchorTime + (f0 - this.anchorFrame) / this.rate;
+            if (startAt < this.audioCtx.currentTime) {
+                // Fell behind the clock (an underrun); re-anchor so the
+                // reported position stays true.
+                this.anchorFrame = f0;
+                this.anchorTime = this.audioCtx.currentTime;
+                startAt = this.audioCtx.currentTime;
+            }
+
+            const source = this.audioCtx.createBufferSource();
+            source.buffer = this._buildBuffer(f0, f1);
+            source.connect(this.gainNode);
+            source.onended = () => { this.sources.delete(source); source.disconnect(); };
+            source.start(startAt);
+            this.sources.add(source);
+            this.scheduledFrame = f1;
         }
-
-        const source = this.audioCtx.createBufferSource();
-        source.buffer = this._buildBuffer(f0, f1);
-        source.connect(this.gainNode);
-        source.onended = () => { this.sources.delete(source); source.disconnect(); };
-        source.start(startAt);
-        this.sources.add(source);
-        this.scheduledFrame = f1;
     }
 
     _stopSources() {
@@ -372,6 +401,10 @@ class PcmStreamPlayer extends EventTarget {
     // Drive timeupdate from the audio clock, the same way an <audio> element does.
     _tick() {
         if (this.rate && this.playing) {
+            // Keep the scheduling horizon moving with the play head; without
+            // this, playback would stop at whatever was scheduled when the last
+            // packet arrived.
+            this._pump();
             this.dispatchEvent(new Event("timeupdate"));
 
             if (this.fullyBuffered && this._currentFrame() >= this.totalFrames) {
