@@ -1279,3 +1279,10 @@ button,
     animation: none;
   }
 }
+
+/* The single-file and folder uploads are two separate <form> elements, so the
+   grid gap inside each does not apply between them -- without this the folder
+   drop zone sits flush against the "Upload selected file" button. */
+.modal-upload-form + .modal-upload-form {
+  margin-top: 1.5rem;
+}

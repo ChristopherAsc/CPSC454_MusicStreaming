@@ -106,12 +106,12 @@
 
     <aside id="upload" class="control-stack" aria-label="Upload and queue controls">
         <section class="upload-panel">
-            <p class="eyebrow">Folder upload</p>
-            <h2>Sync a Music Folder</h2>
-            <button class="drop-zone" type="button" data-upload-open>
-                <strong>Open upload page</strong>
-                <span>Upload audio files, extract metadata, and add them to the streamable library.</span>
-            </button>
+            <p class="eyebrow">Library</p>
+            <h2>Add Music</h2>
+            {% comment %}
+                One control only. It opens the upload window, where the choice
+                between a single file and a whole folder is made.
+            {% endcomment %}
             <button class="wide-button" type="button" data-upload-open>Upload music</button>
         </section>
 
