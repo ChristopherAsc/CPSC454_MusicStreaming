@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PCM Stream Web Client</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 40rem;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.4rem; }
+    fieldset { border: 1px solid #8888; border-radius: 6px; margin-bottom: 1rem; }
+    label { display: block; margin: 0.5rem 0 0.15rem; font-size: 0.85rem; opacity: 0.8; }
+    input[type=text] { width: 100%; padding: 0.4rem; box-sizing: border-box; font: inherit; }
+    .row { display: flex; gap: 0.75rem; }
+    .row > div { flex: 1; }
+    button {
+      font: inherit; padding: 0.5rem 1.2rem; margin-right: 0.5rem;
+      border-radius: 6px; border: 1px solid #8888; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: default; }
+    #transport { margin: 1rem 0; }
+    #seek { width: 100%; margin: 0.25rem 0; }
+    #times { display: flex; justify-content: space-between; font-family: ui-monospace, monospace;
+             font-size: 0.85rem; opacity: 0.8; }
+    #status { font-weight: 600; margin: 0.75rem 0; }
+    #log {
+      background: #0001; border-radius: 6px; padding: 0.5rem 0.75rem;
+      height: 10rem; overflow-y: auto; font-family: ui-monospace, monospace;
+      font-size: 0.8rem; white-space: pre-wrap;
+    }
+    @media (prefers-color-scheme: dark) { #log { background: #fff1; } }
+  </style>
+</head>
+<body>
+  <h1>Raw PCM Stream &mdash; Web Client</h1>
+  <p>Requests a file from the audio server (via the WebSocket bridge) and plays
+     the raw PCM it streams back, using the Web Audio API. Drag the bar to seek.</p>
+
+  <fieldset>
+    <legend>Connection</legend>
+    <label for="file">File name (as it appears in the server's media/ folder)</label>
+    <input id="file" type="text" value="club_music.ogg">
+    <div class="row">
+      <div>
+        <label for="host">Bridge host</label>
+        <input id="host" type="text" value="127.0.0.1">
+      </div>
+      <div>
+        <label for="port">Bridge port</label>
+        <input id="port" type="text" value="8765">
+      </div>
+    </div>
+  </fieldset>
+
+  <button id="play">Play</button>
+  <button id="toggle" disabled>Pause</button>
+  <button id="stop" disabled>Stop</button>
+
+  <div id="transport">
+    <input id="seek" type="range" min="0" max="1" step="0.0001" value="0" disabled>
+    <div id="times"><span id="cur">0:00</span><span id="dur">0:00</span></div>
+  </div>
+
+  <p id="status">Idle</p>
+  <div id="log"></div>
+
+<script>
+// --- Wire protocol (must match protocol.py) --------------------------------
+// Request : uint16 length (big-endian) + that many UTF-8 bytes of file name.
+// Status  : uint8. 0 = OK, 1 = not found, 2 = bad request.
+// Header  : uint32 channels + uint32 rate, both big-endian. Sent only on OK.
+// Payload : raw signed 16-bit little-endian PCM until the connection closes.
+const STATUS_TEXT = {
+  0: 'OK',
+  1: 'file not available on the server',
+  2: 'malformed request',
+};
+const HEADER_SIZE = 8;
+
+const els = {
+  file: document.getElementById('file'),
+  host: document.getElementById('host'),
+  port: document.getElementById('port'),
+  play: document.getElementById('play'),
+  toggle: document.getElementById('toggle'),
+  stop: document.getElementById('stop'),
+  seek: document.getElementById('seek'),
+  cur: document.getElementById('cur'),
+  dur: document.getElementById('dur'),
+  status: document.getElementById('status'),
+  log: document.getElementById('log'),
+};
+
+function log(msg) {
+  const time = new Date().toLocaleTimeString();
+  els.log.textContent += `${time}  ${msg}\n`;
+  els.log.scrollTop = els.log.scrollHeight;
+}
+function setStatus(msg) { els.status.textContent = msg; }
+function fmt(seconds) {
+  if (!isFinite(seconds) || seconds < 0) seconds = 0;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// The one live session: socket + audio + the seekable buffer of decoded PCM.
+// Because the server delivers the whole song in about a second, the browser
+// soon holds all of it, so seeking is a purely local operation -- we retain the
+// PCM and just re-anchor playback to a new position. No server round-trip.
+let session = null;
+
+// -------------------------------------------------------------------------
+// Player: retains all received PCM as frame-aligned segments and plays from
+// any point on demand. Playback position is derived from the audio clock:
+// currentFrame = anchorFrame + (audioClock - anchorTime) * rate. Seeking (and
+// pause/resume) works by stopping the scheduled sources and re-anchoring.
+// -------------------------------------------------------------------------
+function makePlayer(audioCtx, channels, rate) {
+  return {
+    audioCtx, channels, rate,
+    bytesPerFrame: 2 * channels,
+    segments: [],        // { start: firstFrame, frames, data: Uint8Array }
+    leftover: new Uint8Array(0), // bytes not yet forming a whole frame
+    totalFrames: 0,      // frames received so far (grows while buffering)
+    fullyBuffered: false,
+    sources: new Set(),  // AudioBufferSourceNodes currently scheduled
+    playing: false,
+    anchorFrame: 0,      // song frame that the current playback run started at
+    anchorTime: 0,       // audioCtx.currentTime when that run started
+    scheduledFrame: 0,   // next frame not yet handed to a source
+    pausedFrame: 0,      // where a paused/ended player will resume from
+  };
+}
+
+// Append newly arrived PCM, keeping only whole frames; a frame split across two
+// WebSocket messages must not be cut mid-sample.
+function appendPcm(p, chunk) {
+  const data = concat(p.leftover, chunk);
+  const frameCount = Math.floor(data.length / p.bytesPerFrame);
+  const usableBytes = frameCount * p.bytesPerFrame;
+  p.leftover = data.slice(usableBytes); // copy: don't retain a view into `chunk`
+  if (frameCount === 0) return;
+
+  p.segments.push({ start: p.totalFrames, frames: frameCount, data: data.slice(0, usableBytes) });
+  p.totalFrames += frameCount;
+  if (p.playing) pump(p);
+}
+
+// Decode frames [f0, f1) across the retained segments into one AudioBuffer,
+// de-interleaving PCM ([ch0,ch1,ch0,ch1,…]) into one float array per channel.
+function buildBuffer(p, f0, f1) {
+  const n = f1 - f0;
+  const buffer = p.audioCtx.createBuffer(p.channels, n, p.rate);
+  const outs = [];
+  for (let ch = 0; ch < p.channels; ch++) outs.push(buffer.getChannelData(ch));
+
+  for (const seg of p.segments) {
+    const segEnd = seg.start + seg.frames;
+    if (segEnd <= f0 || seg.start >= f1) continue; // no overlap with [f0,f1)
+    const from = Math.max(f0, seg.start);
+    const to = Math.min(f1, segEnd);
+    const view = new DataView(seg.data.buffer, seg.data.byteOffset, seg.data.byteLength);
+    for (let frame = from; frame < to; frame++) {
+      const local = frame - seg.start;
+      const out = frame - f0;
+      for (let ch = 0; ch < p.channels; ch++) {
+        out < n && (outs[ch][out] = view.getInt16((local * p.channels + ch) * 2, true) / 32768);
+      }
+    }
+  }
+  return buffer;
+}
+
+// Schedule everything received but not yet scheduled, as a single source placed
+// on the timeline so it lines up seamlessly with what is already playing.
+function pump(p) {
+  if (!p.playing || p.scheduledFrame >= p.totalFrames) return;
+  const f0 = p.scheduledFrame, f1 = p.totalFrames;
+
+  let startAt = p.anchorTime + (f0 - p.anchorFrame) / p.rate;
+  if (startAt < p.audioCtx.currentTime) {
+    // We fell behind the clock (an underrun); re-anchor so position stays true.
+    p.anchorFrame = f0;
+    p.anchorTime = p.audioCtx.currentTime;
+    startAt = p.audioCtx.currentTime;
+  }
+
+  const source = p.audioCtx.createBufferSource();
+  source.buffer = buildBuffer(p, f0, f1);
+  source.connect(p.audioCtx.destination);
+  source.onended = () => { p.sources.delete(source); source.disconnect(); };
+  source.start(startAt);
+  p.sources.add(source);
+  p.scheduledFrame = f1;
+}
+
+function stopSources(p) {
+  for (const source of p.sources) {
+    source.onended = null;
+    try { source.stop(); } catch (e) { /* not started */ }
+    source.disconnect();
+  }
+  p.sources.clear();
+}
+
+// (Re)start playback from a given frame -- the heart of seek, resume and play.
+function playFrom(p, frame) {
+  frame = Math.max(0, Math.min(frame, p.totalFrames));
+  stopSources(p);
+  p.anchorFrame = frame;
+  p.anchorTime = p.audioCtx.currentTime;
+  p.scheduledFrame = frame;
+  p.playing = true;
+  pump(p);
+}
+
+function pause(p) {
+  if (!p.playing) return;
+  p.pausedFrame = currentFrame(p);
+  p.playing = false;
+  stopSources(p);
+}
+
+// Current play position in frames, from the audio clock, clamped to the buffer.
+function currentFrame(p) {
+  if (!p.playing) return p.pausedFrame;
+  const f = p.anchorFrame + (p.audioCtx.currentTime - p.anchorTime) * p.rate;
+  return Math.max(0, Math.min(Math.round(f), p.totalFrames));
+}
+
+// -------------------------------------------------------------------------
+// Session wiring: connect, run the protocol handshake, feed the player.
+// -------------------------------------------------------------------------
+function start() {
+  const filename = els.file.value.trim();
+  if (!filename) { log('Enter a file name first.'); return; }
+
+  // The AudioContext must be created inside this click handler: browsers only
+  // let audio start from a user gesture (the autoplay policy).
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const url = `ws://${els.host.value.trim()}:${els.port.value.trim()}`;
+  const ws = new WebSocket(url);
+  ws.binaryType = 'arraybuffer';
+
+  session = {
+    ws, audioCtx,
+    phase: 'HEADER',              // HEADER until status+header are read, then PCM
+    handshake: new Uint8Array(0), // bytes collected before streaming begins
+    player: null,
+  };
+
+  els.play.disabled = true;
+  els.stop.disabled = false;
+  setStatus('Connecting…');
+
+  ws.onopen = () => {
+    log(`Connected to ${url}`);
+    setStatus('Requesting…');
+    const nameBytes = new TextEncoder().encode(filename);
+    if (nameBytes.length === 0 || nameBytes.length > 255) {
+      log('File name must be 1–255 bytes.');
+      stop();
+      return;
+    }
+    const frame = new Uint8Array(2 + nameBytes.length);
+    new DataView(frame.buffer).setUint16(0, nameBytes.length, false); // big-endian
+    frame.set(nameBytes, 2);
+    ws.send(frame);
+    log(`Requested "${filename}"`);
+  };
+
+  ws.onmessage = (ev) => onBytes(new Uint8Array(ev.data));
+
+  ws.onclose = () => {
+    // A clean close means the whole song has now been delivered: the player
+    // keeps its buffer so the user can still seek, pause and replay from it.
+    if (session && session.player) {
+      session.player.fullyBuffered = true;
+      log('Fully buffered (server closed the stream).');
+    } else if (session) {
+      finish();
+    }
+  };
+
+  ws.onerror = () => {
+    log('WebSocket error (is the bridge running?)');
+    setStatus('Connection failed');
+  };
+}
+
+function onBytes(chunk) {
+  if (!session) return;
+  if (session.phase === 'HEADER') {
+    session.handshake = concat(session.handshake, chunk);
+    parseHandshake();
+  } else if (session.player) {
+    appendPcm(session.player, chunk);
+  }
+}
+
+// Read the 1-byte status and (on OK) the 8-byte header, then start the player;
+// any bytes past the header are the first PCM and flow straight into it.
+function parseHandshake() {
+  const buf = session.handshake;
+  if (buf.length < 1) return;
+
+  const status = buf[0];
+  if (status !== 0) {
+    log(`Server refused: ${STATUS_TEXT[status] || 'unknown status ' + status}`);
+    setStatus('Refused');
+    stop();
+    return;
+  }
+  if (buf.length < 1 + HEADER_SIZE) return; // wait for the full header
+
+  const view = new DataView(buf.buffer, buf.byteOffset + 1, HEADER_SIZE);
+  const channels = view.getUint32(0, false); // big-endian
+  const rate = view.getUint32(4, false);
+
+  session.player = makePlayer(session.audioCtx, channels, rate);
+  session.phase = 'PCM';
+  log(`Stream format: ${channels} channel(s) @ ${rate} Hz`);
+  setStatus(`Playing (${channels}ch @ ${rate} Hz)`);
+  els.toggle.disabled = false;
+  els.toggle.textContent = 'Pause';
+  els.seek.disabled = false;
+
+  const rest = buf.subarray(1 + HEADER_SIZE);
+  session.handshake = new Uint8Array(0);
+  playFrom(session.player, 0); // begin playback as data streams in
+  if (rest.length) appendPcm(session.player, rest);
+}
+
+function stop() {
+  if (!session) return;
+  const s = session;
+  session = null;
+  try { s.ws.close(); } catch (e) { /* already closing */ }
+  if (s.player) stopSources(s.player);
+  try { s.audioCtx.close(); } catch (e) { /* already closed */ }
+  finish();
+}
+
+function finish() {
+  els.play.disabled = false;
+  els.toggle.disabled = true;
+  els.stop.disabled = true;
+  els.seek.disabled = true;
+  els.seek.value = 0;
+  els.cur.textContent = '0:00';
+  els.dur.textContent = '0:00';
+  if (!els.status.textContent.startsWith('Refused')) setStatus('Stopped');
+}
+
+// -------------------------------------------------------------------------
+// Transport controls
+// -------------------------------------------------------------------------
+let userScrubbing = false;
+
+els.play.addEventListener('click', start);
+
+els.stop.addEventListener('click', () => { setStatus('Stopped'); log('Stopped by user.'); stop(); });
+
+els.toggle.addEventListener('click', () => {
+  const p = session && session.player;
+  if (!p) return;
+  if (p.playing) {
+    pause(p);
+    els.toggle.textContent = 'Resume';
+    setStatus('Paused');
+  } else {
+    // Resuming from the very end replays from the start.
+    playFrom(p, p.pausedFrame >= p.totalFrames ? 0 : p.pausedFrame);
+    els.toggle.textContent = 'Pause';
+    setStatus(`Playing (${p.channels}ch @ ${p.rate} Hz)`);
+  }
+});
+
+// While the user drags, hold the readout still; commit the seek on release.
+els.seek.addEventListener('input', () => {
+  userScrubbing = true;
+  const p = session && session.player;
+  if (p && p.totalFrames) els.cur.textContent = fmt(els.seek.value * p.totalFrames / p.rate);
+});
+els.seek.addEventListener('change', () => {
+  const p = session && session.player;
+  userScrubbing = false;
+  if (!p || !p.totalFrames) return;
+  const wasPaused = !p.playing;
+  playFrom(p, Math.round(els.seek.value * p.totalFrames));
+  if (wasPaused) { pause(p); els.toggle.textContent = 'Resume'; }
+  log(`Seek to ${fmt(currentFrame(p) / p.rate)}`);
+});
+
+// Drive the seek bar and time readout from the audio clock every frame.
+function tick() {
+  const p = session && session.player;
+  if (p && p.totalFrames) {
+    const cur = currentFrame(p);
+    const total = p.totalFrames;
+    if (!userScrubbing) {
+      els.seek.value = cur / total;
+      els.cur.textContent = fmt(cur / p.rate);
+    }
+    // Duration keeps growing while buffering; it is final once fully buffered.
+    els.dur.textContent = fmt(total / p.rate) + (p.fullyBuffered ? '' : '…');
+
+    // Stop the clock cleanly when playback reaches the end of a complete song.
+    if (p.playing && p.fullyBuffered && cur >= total) {
+      pause(p);
+      p.pausedFrame = total;
+      els.toggle.textContent = 'Resume';
+      setStatus('Finished');
+    }
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// Concatenate two Uint8Arrays into a new one.
+function concat(a, b) {
+  if (a.length === 0) return b;
+  if (b.length === 0) return a;
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
+}
+</script>
+</body>
+</html>
