@@ -2,6 +2,7 @@ import hashlib
 import mimetypes
 import re
 from pathlib import Path
+from django.db.models import Q
 
 from django.http import FileResponse, HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -299,6 +300,26 @@ def _dashboard_track(request, track, index):
         "download_url": f"/tracks/{track.id}/download/",
     }
 
+@require_GET
+def api_search(request):
+    query = request.GET.get("q", "").strip()
+    if not query:
+        return JsonResponse({"results": []})
+
+    tracks = Track.objects.filter(
+        Q(title__icontains=query) | Q(artist__icontains=query) | Q(album__icontains=query)
+    ).order_by("-id")[:10]
+
+    results = [
+        {
+            "id": t.id,
+            "title": t.display_title,
+            "artist": t.display_artist,
+            "stream_url": f"/tracks/{t.id}/stream/",
+        }
+        for t in tracks
+    ]
+    return JsonResponse({"results": results})
 
 @require_GET
 def home(request):
@@ -487,6 +508,32 @@ def upload_page(request):
         </html>
         """
     )
+
+
+@require_GET
+def api_search(request):
+    query = request.GET.get("q", "").strip()
+
+    if not query:
+        return JsonResponse({"results": []})
+
+    tracks = Track.objects.filter(
+        Q(title__icontains=query)
+        | Q(artist__icontains=query)
+        | Q(album__icontains=query)
+    ).order_by("-id")[:10]
+
+    results = [
+        {
+            "id": track.id,
+            "title": track.display_title,
+            "artist": track.display_artist,
+            "stream_url": f"/tracks/{track.id}/stream/",
+        }
+        for track in tracks
+    ]
+
+    return JsonResponse({"results": results})
 
 
 @require_GET

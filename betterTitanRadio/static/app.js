@@ -15,6 +15,7 @@ const progressRange = document.querySelector("#progress-range");
 const volumeRange = document.querySelector("#volume-range");
 const timeCode = document.querySelector("#time-code");
 const uploadModal = document.querySelector("#upload-modal");
+const dropdown = document.querySelector("#search-dropdown")
 
 const audioPlayer = document.querySelector("#audio-player") || new Audio();
 audioPlayer.preload = "metadata";
@@ -317,24 +318,85 @@ progressRange?.addEventListener("pointerup", (event) => {
     isSeeking = false;
 });
 
-searchInput?.addEventListener("input", () => {
-    const query = searchInput.value.trim().toLowerCase();
-    let visibleCount = 0;
 
-    rows.forEach((row) => {
-        const text = `${row.dataset.title} ${row.dataset.artist}`.toLowerCase();
-        const isVisible = text.includes(query);
-        row.hidden = !isVisible;
+// logic for searching
+async function runSearch(query){
+    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+    return data.results;
+}
 
-        if (isVisible) {
-            visibleCount += 1;
-        }
+function renderResults(results){
+    dropdown.innerHTML = "";
+
+    console.log("this is the state of the dropdown bool: ", dropdown.hidden)
+    if (results.length=== 0){
+        // if nothing, display that nothing was found and to upload a song or something
+        const item = document.createElement("li");
+        item.textContent = `No songs found! Upload a song`
+        dropdown.appendChild(item)
+        dropdown.hidden = false
+        return;
+    }
+    results.forEach((track) => {
+        const item = document.createElement("li");
+        item.textContent = `${track.title} — ${track.artist}`;
+        item.dataset.streamUrl = track.stream_url;
+        item.dataset.title = track.title;
+        item.dataset.artist = track.artist;
+        dropdown.appendChild(item)
     });
 
-    if (emptyState) {
-        emptyState.hidden = visibleCount !== 0;
+    dropdown.hidden =false;
+}
+let latestQuery = "";
+
+async function handleInput(){
+    const query = searchInput.value.trim();
+    latestQuery = query;
+
+    if (!query){
+        dropdown.hidden = true;
+        return;
     }
+
+    const results = await runSearch(query);
+
+    if (query !== latestQuery) return;
+
+    renderResults(results);
+}
+
+let debounceTimer;
+
+searchInput.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        handleInput();
+    }, 100);
 });
+
+dropdown.addEventListener("click", (event) => {
+    const item = event.target.closest("li");
+    if (!item) return;
+
+    setNowPlaying(item.dataset.title, item.dataset.artist, item.dataset.streamUrl);
+    dropdown.hidden = true;
+    searchInput.value = "";
+});
+
+document.addEventListener("click", (event) => {
+    if(!event.target.closest(".search-wrapper")) {
+        dropdown.hidden = true;
+    }
+})
+
+searchInput.addEventListener("keydown", (event)=> {
+    if(event.key === "Escape") {
+        dropdown.hidden = true;
+        searchInput.blur();
+    }
+})
 
 document.querySelectorAll("[data-upload-open]").forEach((trigger) => {
     trigger.addEventListener("click", (event) => {
