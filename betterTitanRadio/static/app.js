@@ -19,24 +19,36 @@ const uploadForm = document.querySelector("[data-upload-form]");
 const uploadStatus = document.querySelector("#upload-status");
 const dropdown = document.querySelector("#search-dropdown")
 
-const audioPlayer = document.querySelector("#audio-player") || new Audio();
-audioPlayer.preload = "metadata";
+// Playback goes through the raw-PCM stream server rather than an <audio>
+// element: tracks are requested by sha256 over the WebSocket bridge. The player
+// exposes the same play/pause/currentTime/duration/volume surface and the same
+// events, so the transport controls below are unchanged.
+const bridgeUrl = document.querySelector('meta[name="stream-bridge-url"]')?.content
+    || `ws://${window.location.hostname}:8765`;
+const audioPlayer = new PcmStreamPlayer(bridgeUrl);
 window.btrAudioPlayer = audioPlayer;
 
 const volumeStorageKey = "btr-player-volume";
 
-let activeStreamUrl = "";
+let activeSha256 = "";
 let activeTrackIndex = -1;
 let isPlaying = false;
 let isSeeking = false;
 let pendingSeekPercent = 0;
 
-const playlist = playButtons
-    .filter((button) => button.dataset.streamUrl)
-    .map((button) => ({
-        title: button.dataset.playTitle,
-        artist: button.dataset.playArtist,
-        streamUrl: button.dataset.streamUrl,
+// Built from the track rows, not from the play buttons: [data-play-title] also
+// matches the hero's "Play latest" button, which points at the first track, so
+// building from buttons put that track in the queue twice -- it would play, then
+// immediately play again before the queue moved on.
+//
+// The hero button still works: setNowPlaying() resolves any sha256 to its
+// position here, wherever the click came from.
+const playlist = rows
+    .filter((row) => row.dataset.sha256)
+    .map((row) => ({
+        title: row.dataset.title,
+        artist: row.dataset.artist,
+        sha256: row.dataset.sha256,
     }));
 
 function formatTime(seconds) {
@@ -123,8 +135,22 @@ function applyVolume(level) {
     syncVolumeControl();
 }
 
+// Mark the row of the track being played so it shows the visualizer instead of
+// its initial. Driven by activeSha256 rather than by the clicked button, so a
+// track started from the search dropdown lights up its row in the list too.
+function updatePlayingRow() {
+    rows.forEach((row) => {
+        const isActive = Boolean(activeSha256)
+            && row.dataset.sha256 === activeSha256;
+
+        row.classList.toggle("is-playing", isActive);
+        row.classList.toggle("is-paused", isActive && !isPlaying);
+    });
+}
+
 function setPlaybackState(playing) {
     isPlaying = playing;
+    updatePlayingRow();
 
     if (playToggle) {
         playToggle.setAttribute("aria-label", playing ? "Pause" : "Play");
@@ -166,45 +192,27 @@ function updateNowPlaying(track) {
     }
 }
 
-function findTrackIndex(streamUrl) {
-    return playlist.findIndex((track) => track.streamUrl === streamUrl);
+function findTrackIndex(sha256) {
+    return playlist.findIndex((track) => track.sha256 === sha256);
 }
 
-function beginPlayback() {
-    const attemptPlay = () => {
-        const playPromise = audioPlayer.play();
-
-        if (playPromise && typeof playPromise.then === "function") {
-            playPromise.then(() => {
-                setPlaybackState(true);
-            }).catch(() => {
-                setPlaybackState(false);
-            });
-            return;
-        }
-
-        setPlaybackState(true);
-    };
-
-    if (!audioPlayer.src) {
+// Requesting a track starts playback on its own: the player begins as soon as
+// the stream header arrives, so there is no readyState to wait on. Re-selecting
+// the track already loaded just resumes it instead of reconnecting.
+function beginPlayback(sha256) {
+    if (!sha256) {
         setPlaybackState(false);
         return;
     }
 
-    if (audioPlayer.readyState >= 2) {
-        attemptPlay();
+    if (activeSha256 === sha256 && audioPlayer.readyState >= 2) {
+        audioPlayer.play();
         return;
     }
 
-    const onReady = () => {
-        audioPlayer.removeEventListener("loadedmetadata", onReady);
-        audioPlayer.removeEventListener("canplay", onReady);
-        attemptPlay();
-    };
-
-    audioPlayer.addEventListener("loadedmetadata", onReady, { once: true });
-    audioPlayer.addEventListener("canplay", onReady, { once: true });
-    audioPlayer.load();
+    activeSha256 = sha256;
+    updatePlayingRow();
+    audioPlayer.loadTrack(sha256);
 }
 
 function playTrack(index) {
@@ -216,35 +224,24 @@ function playTrack(index) {
     const track = playlist[normalizedIndex];
     activeTrackIndex = normalizedIndex;
     updateNowPlaying(track);
-
-    if (activeStreamUrl !== track.streamUrl) {
-        activeStreamUrl = track.streamUrl;
-        audioPlayer.src = track.streamUrl;
-        audioPlayer.load();
-    }
-
     updateTimeDisplay();
-    beginPlayback();
+    beginPlayback(track.sha256);
 }
 
-function setNowPlaying(title, artist, streamUrl) {
-    const trackIndex = findTrackIndex(streamUrl);
+function setNowPlaying(title, artist, sha256) {
+    const trackIndex = findTrackIndex(sha256);
 
     if (trackIndex >= 0) {
         playTrack(trackIndex);
         return;
     }
 
-    const fallbackTrack = { title, artist, streamUrl };
-    activeStreamUrl = streamUrl;
-    updateNowPlaying(fallbackTrack);
-
-    if (audioPlayer.src !== new URL(streamUrl, window.location.href).href) {
-        audioPlayer.src = streamUrl;
-    }
-
+    // A search hit for a track that is not on this page has no playlist entry;
+    // play it directly and leave next/previous pointing at the visible list.
+    activeTrackIndex = -1;
+    updateNowPlaying({ title, artist });
     updateTimeDisplay();
-    beginPlayback();
+    beginPlayback(sha256);
 }
 
 playButtons.forEach((button) => {
@@ -252,13 +249,13 @@ playButtons.forEach((button) => {
         setNowPlaying(
             button.dataset.playTitle,
             button.dataset.playArtist,
-            button.dataset.streamUrl,
+            button.dataset.sha256,
         );
     });
 });
 
 playToggle?.addEventListener("click", () => {
-    if (!activeStreamUrl) {
+    if (!activeSha256) {
         playTrack(0);
         return;
     }
@@ -267,7 +264,7 @@ playToggle?.addEventListener("click", () => {
         audioPlayer.pause();
         setPlaybackState(false);
     } else {
-        beginPlayback();
+        beginPlayback(activeSha256);
     }
 });
 
@@ -290,6 +287,20 @@ audioPlayer.addEventListener("ended", () => {
     } else {
         setPlaybackState(false);
     }
+});
+
+// A refused or unreachable stream is invisible otherwise -- the transport would
+// just sit at 0:00 -- so surface it where the track name goes.
+audioPlayer.addEventListener("error", (event) => {
+    activeSha256 = "";
+    setPlaybackState(false);
+    updateTimeDisplay();
+
+    const reason = event.detail || "stream unavailable";
+    if (playerArtist) {
+        playerArtist.textContent = `Playback failed: ${reason}`;
+    }
+    console.error("PCM stream error:", reason);
 });
 
 progressRange?.addEventListener("input", () => {
@@ -343,7 +354,7 @@ function renderResults(results){
     results.forEach((track) => {
         const item = document.createElement("li");
         item.textContent = `${track.title} — ${track.artist}`;
-        item.dataset.streamUrl = track.stream_url;
+        item.dataset.sha256 = track.sha256;
         item.dataset.title = track.title;
         item.dataset.artist = track.artist;
         dropdown.appendChild(item)
@@ -371,18 +382,18 @@ async function handleInput(){
 
 let debounceTimer;
 
-searchInput.addEventListener("input", () => {
+searchInput?.addEventListener("input", () => {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         handleInput();
     }, 100);
 });
 
-dropdown.addEventListener("click", (event) => {
+dropdown?.addEventListener("click", (event) => {
     const item = event.target.closest("li");
     if (!item) return;
 
-    setNowPlaying(item.dataset.title, item.dataset.artist, item.dataset.streamUrl);
+    setNowPlaying(item.dataset.title, item.dataset.artist, item.dataset.sha256);
     dropdown.hidden = true;
     searchInput.value = "";
 });
@@ -393,7 +404,7 @@ document.addEventListener("click", (event) => {
     }
 })
 
-searchInput.addEventListener("keydown", (event)=> {
+searchInput?.addEventListener("keydown", (event)=> {
     if(event.key === "Escape") {
         dropdown.hidden = true;
         searchInput.blur();
@@ -517,6 +528,196 @@ uploadStatus?.addEventListener("click", (event) => {
     if (event.target.closest("[data-upload-again]")) {
         uploadForm?.reset();
         resetUploadStatus();
+    }
+});
+
+
+// --- Folder upload -------------------------------------------------------
+// The picker hands us every file in the chosen folder, including artwork and
+// stray dotfiles. Those are filtered out here so the count shown to the user is
+// the number of tracks, and the server is never asked to reject them one by one.
+//
+// Files go up one request at a time rather than as a single giant POST: a music
+// folder can be gigabytes, and sequential uploads keep memory bounded, let the
+// progress readout be truthful, and make cancelling possible.
+
+const folderForm = document.querySelector("[data-folder-form]");
+const folderInput = document.querySelector("#modal-folder-upload");
+const folderStatus = document.querySelector("#folder-status");
+const folderSubmit = document.querySelector("[data-folder-submit]");
+
+// Must match ALLOWED_AUDIO_EXTENSIONS in views.py.
+const audioExtensions = ["mp3", "flac", "wav", "m4a", "aac", "ogg", "opus"];
+
+let folderUploadRunning = false;
+let folderUploadCancelled = false;
+
+function isAudioFile(file) {
+    const name = file.name.toLowerCase();
+    const dot = name.lastIndexOf(".");
+
+    return dot > 0 && audioExtensions.includes(name.slice(dot + 1));
+}
+
+function setFolderStatus(type, message, detail = "") {
+    if (!folderStatus) {
+        return;
+    }
+
+    folderStatus.hidden = false;
+    folderStatus.className = `upload-status ${type ? `is-${type}` : ""}`;
+    folderStatus.innerHTML = `<strong>${escapeHtml(message)}</strong>${detail}`;
+}
+
+function pluralize(count, word) {
+    return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+folderInput?.addEventListener("change", () => {
+    const chosen = Array.from(folderInput.files || []);
+
+    if (!chosen.length) {
+        folderStatus.hidden = true;
+        return;
+    }
+
+    const audioFiles = chosen.filter(isAudioFile);
+    const others = chosen.length - audioFiles.length;
+
+    if (!audioFiles.length) {
+        setFolderStatus(
+            "error",
+            "No audio files in that folder.",
+            `<span>${pluralize(chosen.length, "file")} found, none playable.</span>`,
+        );
+        return;
+    }
+
+    setFolderStatus(
+        "",
+        `${pluralize(audioFiles.length, "track")} ready to upload.`,
+        others
+            ? `<span>${pluralize(others, "other file")} will be skipped.</span>`
+            : "",
+    );
+});
+
+async function uploadOneFile(file, action, token) {
+    const body = new FormData();
+    body.append("files", file, file.name);
+
+    if (token) {
+        body.append("csrfmiddlewaretoken", token);
+    }
+
+    const response = await fetch(action, {
+        method: "POST",
+        body,
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+
+    if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+
+        try {
+            message = (await response.json()).error || message;
+        } catch (error) {
+            // A proxy or crash can return HTML; keep the status code.
+        }
+
+        throw new Error(message);
+    }
+
+    return response.json();
+}
+
+folderForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    // A second click while running means cancel, not upload again.
+    if (folderUploadRunning) {
+        folderUploadCancelled = true;
+        return;
+    }
+
+    const audioFiles = Array.from(folderInput?.files || []).filter(isAudioFile);
+
+    if (!audioFiles.length) {
+        setFolderStatus("error", "Choose a folder containing audio files first.");
+        return;
+    }
+
+    const token = folderForm.querySelector("[name=csrfmiddlewaretoken]")?.value;
+    const totals = { created: 0, duplicate: 0, skipped: 0, failed: 0 };
+    const failures = [];
+
+    folderUploadRunning = true;
+    folderUploadCancelled = false;
+
+    if (folderSubmit) {
+        folderSubmit.textContent = "Cancel upload";
+    }
+
+    for (let index = 0; index < audioFiles.length; index += 1) {
+        if (folderUploadCancelled) {
+            break;
+        }
+
+        const file = audioFiles[index];
+        // webkitRelativePath shows where in the folder this file came from;
+        // multipart only carries the basename, so this is the client's to show.
+        const label = file.webkitRelativePath || file.name;
+
+        setFolderStatus(
+            "pending",
+            `Uploading ${index + 1} of ${audioFiles.length}...`,
+            `<span>${escapeHtml(label)}</span>`,
+        );
+
+        try {
+            const data = await uploadOneFile(file, folderForm.action, token);
+
+            for (const key of Object.keys(totals)) {
+                totals[key] += data.counts?.[key] || 0;
+            }
+        } catch (error) {
+            totals.failed += 1;
+            failures.push(`${label}: ${error.message}`);
+        }
+    }
+
+    folderUploadRunning = false;
+
+    if (folderSubmit) {
+        folderSubmit.textContent = "Upload folder";
+    }
+
+    const summary = [
+        `${pluralize(totals.created, "track")} added`,
+        totals.duplicate ? `${totals.duplicate} already in the library` : "",
+        totals.skipped ? `${totals.skipped} skipped` : "",
+        totals.failed ? `${totals.failed} failed` : "",
+    ].filter(Boolean).join(", ");
+
+    const failureList = failures.length
+        ? `<span>${failures.slice(0, 5).map(escapeHtml).join("<br>")}${
+            failures.length > 5 ? `<br>and ${failures.length - 5} more...` : ""
+        }</span>`
+        : "";
+
+    setFolderStatus(
+        totals.failed ? "error" : "success",
+        folderUploadCancelled ? `Cancelled — ${summary}` : `Folder upload complete — ${summary}`,
+        `${failureList}
+        <div class="upload-status-actions">
+            <button type="button" data-upload-refresh>View updated library</button>
+        </div>`,
+    );
+});
+
+folderStatus?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-upload-refresh]")) {
+        window.location.reload();
     }
 });
 

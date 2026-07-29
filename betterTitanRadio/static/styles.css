@@ -1170,3 +1170,119 @@ button,
     justify-content: flex-start;
   }
 }
+
+/* Settings page */
+
+.settings-copy {
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin: 0.75rem 0;
+  max-width: 60ch;
+}
+
+.settings-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.settings-facts > div {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  min-width: 140px;
+  padding: 0.75rem 0.9rem;
+}
+
+.settings-facts dt {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.settings-facts dd {
+  font-size: 1.25rem;
+  font-weight: 900;
+  margin-top: 0.25rem;
+}
+
+/* The destructive action reads as destructive, not as another primary button. */
+.danger-button.wide-button {
+  background: rgba(255, 138, 138, 0.12);
+  border: 1px solid rgba(255, 138, 138, 0.42);
+  color: #ff8a8a;
+}
+
+.danger-button.wide-button:hover:not(:disabled) {
+  background: rgba(255, 138, 138, 0.2);
+}
+
+.danger-button.wide-button:disabled {
+  background: #252b37;
+  border-color: var(--panel-border);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+/* Now-playing indicator on the track list.
+   Reuses .visualizer (same bounce animation and accent) at row scale, sitting
+   in the cover square in place of the track's initial. */
+
+.track-row .cover {
+  display: grid;
+  place-items: center;
+}
+
+/* Stack the letter and the bars in one cell so swapping them never reflows. */
+.track-row .cover > .cover-letter,
+.track-row .cover > .visualizer-mini {
+  grid-area: 1 / 1;
+}
+
+.visualizer-mini {
+  align-items: end;
+  display: none;
+  gap: 3px;
+  height: 22px;
+}
+
+.visualizer-mini span {
+  border-radius: 2px;
+  /* The cover is filled with the row's accent, so the bars take the cover's
+     foreground colour instead -- var(--accent) on var(--accent) is invisible. */
+  background: #11131a;
+  width: 4px;
+}
+
+.track-row.is-playing .cover > .cover-letter {
+  visibility: hidden;
+}
+
+.track-row.is-playing .visualizer-mini {
+  display: flex;
+}
+
+/* Paused is still "the current track", so the bars stay put rather than vanish. */
+.track-row.is-playing.is-paused .visualizer-mini span {
+  animation-play-state: paused;
+}
+
+.track-row.is-playing {
+  background: #202631;
+  border-color: var(--panel-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visualizer span,
+  .visualizer-mini span {
+    animation: none;
+  }
+}
+
+/* The single-file and folder uploads are two separate <form> elements, so the
+   grid gap inside each does not apply between them -- without this the folder
+   drop zone sits flush against the "Upload selected file" button. */
+.modal-upload-form + .modal-upload-form {
+  margin-top: 1.5rem;
+}

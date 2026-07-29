@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+*.venv
+__pycache__/
+=======
 # Virtual environments
 .venv/
 venv/
@@ -46,3 +49,7 @@ temp
 # ignore tracks 
 
 tracks
+
+# other
+
+.python-version

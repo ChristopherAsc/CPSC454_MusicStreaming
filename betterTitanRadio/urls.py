@@ -7,6 +7,13 @@ urlpatterns = [
     path("", views.home, name="home"),
     path("test/", views.test, name="test"),
     path("upload/", views.upload_page, name="upload"),
+    path("settings/", views.settings_page, name="settings"),
+
+    path(
+        "api/library/clear/",
+        views.api_clear_library,
+        name="api_clear_library",
+    ),
 
     path(
         "api/tracks/",
@@ -22,6 +29,11 @@ urlpatterns = [
         "api/tracks/upload/",
         views.api_upload,
         name="api_upload",
+    ),
+    path(
+        "api/tracks/upload-folder/",
+        views.api_upload_folder,
+        name="api_upload_folder",
     ),
 
     path(

@@ -68,6 +68,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'betterTitanRadio.context_processors.streaming',
             ],
         },
     },
@@ -137,6 +138,33 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
+# Raw-PCM audio streaming (betterTitanRadio/streaming, run by `manage.py
+# runstreamserver`). This is a second server on its own port -- runserver does
+# not start it.
+
+# The TCP server speaks the custom protocol. Only the bridge needs to reach it,
+# and the bridge runs in the same process, so it stays on the loopback interface
+# rather than being exposed directly to the network.
+STREAM_SERVER_HOST = os.environ.get('STREAM_SERVER_HOST', '127.0.0.1')
+STREAM_SERVER_PORT = int(os.environ.get('STREAM_SERVER_PORT', '5001'))
+
+# One ffmpeg process per live stream, so this caps concurrent transcodes.
+STREAM_MAX_INSTANCES = int(os.environ.get('STREAM_MAX_INSTANCES', '4'))
+
+# The WebSocket bridge is what browsers actually connect to.
+STREAM_BRIDGE_HOST = os.environ.get('STREAM_BRIDGE_HOST', '127.0.0.1')
+STREAM_BRIDGE_PORT = int(os.environ.get('STREAM_BRIDGE_PORT', '8765'))
+
+# The URL handed to the page. Defaults to the bridge's own host/port, which is
+# right for local development; set it explicitly when the browser reaches the
+# bridge at a different address than the bridge binds to (behind a proxy, or on
+# EC2 where it must be the public host and wss://).
+STREAM_BRIDGE_URL = os.environ.get(
+    'STREAM_BRIDGE_URL',
+    f'ws://{STREAM_BRIDGE_HOST}:{STREAM_BRIDGE_PORT}',
+)
+
+
 # Media files (uploaded tracks)
 # Uses S3 when AWS_STORAGE_BUCKET_NAME is set, so every developer/instance
 # reads and writes the same files instead of each machine's local disk.
@@ -165,3 +193,14 @@ if AWS_STORAGE_BUCKET_NAME:
 else:
     MEDIA_URL = 'media/'
     MEDIA_ROOT = BASE_DIR / 'media'
+
+
+# Folder upload (POST /api/tracks/upload-folder/)
+# Django rejects a request carrying more than this many files, defaulting to
+# 100 -- enough to fail on a decent album collection posted in one curl. The
+# dashboard is unaffected either way, since it uploads one file per request.
+# The cap exists to bound how many temp files one request can create, so this
+# is raised rather than removed (None would disable it entirely).
+DATA_UPLOAD_MAX_NUMBER_FILES = int(
+    os.environ.get('DATA_UPLOAD_MAX_NUMBER_FILES', '1000')
+)

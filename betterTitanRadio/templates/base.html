@@ -5,7 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Better Titan Radio</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    {% comment %}
+        Where the browser reaches the WebSocket bridge fronting the PCM stream
+        server. Set STREAM_BRIDGE_URL when it differs from the bind address.
+    {% endcomment %}
+    <meta name="stream-bridge-url" content="{{ stream_bridge_url }}">
+    <link rel="stylesheet" href="{% static 'styles.css' %}?v=3">
 </head>
 <body>
     <div class="app-shell">
@@ -24,6 +29,7 @@
                 <a href="{% url 'api_tracks' %}">JSON API</a>
                 <a href="{% url 'test' %}">Test</a>
                 <a href="/admin/">Admin</a>
+                <a href="{% url 'settings' %}">Settings</a>
             </nav>
         </aside>
 
@@ -31,7 +37,10 @@
             {% block content %}{% endblock %}
         </main>
         <footer class="player-bar" aria-label="Now playing">
-            <audio id="audio-player" preload="metadata"></audio>
+            {% comment %}
+                Playback is Web Audio, driven by static/pcm_player.js -- there
+                is no media element to attach a src to.
+            {% endcomment %}
             <div id="player-cover" class="mini-cover">T</div>
             <div class="player-meta">
                 <strong id="player-title">Titan Nights</strong>
@@ -58,6 +67,8 @@
             <span id="time-code" class="time-code">0:00 / 0:00</span>
         </footer>
     </div>
-    <script src="{% static 'app.js' %}?v=4"></script>
+    <script src="{% static 'pcm_player.js' %}?v=2"></script>
+    <script src="{% static 'app.js' %}?v=9"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
