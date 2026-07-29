@@ -36,12 +36,19 @@ let isPlaying = false;
 let isSeeking = false;
 let pendingSeekPercent = 0;
 
-const playlist = playButtons
-    .filter((button) => button.dataset.sha256)
-    .map((button) => ({
-        title: button.dataset.playTitle,
-        artist: button.dataset.playArtist,
-        sha256: button.dataset.sha256,
+// Built from the track rows, not from the play buttons: [data-play-title] also
+// matches the hero's "Play latest" button, which points at the first track, so
+// building from buttons put that track in the queue twice -- it would play, then
+// immediately play again before the queue moved on.
+//
+// The hero button still works: setNowPlaying() resolves any sha256 to its
+// position here, wherever the click came from.
+const playlist = rows
+    .filter((row) => row.dataset.sha256)
+    .map((row) => ({
+        title: row.dataset.title,
+        artist: row.dataset.artist,
+        sha256: row.dataset.sha256,
     }));
 
 function formatTime(seconds) {
