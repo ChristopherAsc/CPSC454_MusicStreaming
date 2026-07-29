@@ -1242,12 +1242,12 @@ button,
 
   .player-bar {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr) 44px 52px 44px;
+    grid-template-columns: 44px minmax(0, 1fr) 48px 48px 48px minmax(0, 1fr);
     grid-template-areas:
-      "cover meta meta meta meta"
-      ". previous play next ."
-      "progress progress progress progress time"
-      "volume volume volume volume volume";
+      "cover meta meta meta meta meta"
+      ". . previous play next ."
+      "progress progress progress progress progress time"
+      "volume volume volume volume volume volume";
     gap: 0.75rem;
     min-height: 210px;
     padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
@@ -1273,14 +1273,17 @@ button,
 
   #previous-track {
     grid-area: previous;
+    justify-self: center;
   }
 
   #play-toggle {
     grid-area: play;
+    justify-self: center;
   }
 
   #next-track {
     grid-area: next;
+    justify-self: center;
   }
 
   .player-bar .primary-control {
@@ -1323,7 +1326,7 @@ button,
   }
 
   .player-bar {
-    grid-template-columns: 40px minmax(0, 1fr) 40px 48px 40px;
+    grid-template-columns: 40px minmax(0, 1fr) 44px 44px 44px minmax(0, 1fr);
     gap: 0.65rem;
     min-height: 220px;
     padding-left: 0.75rem;
