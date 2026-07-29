@@ -774,6 +774,10 @@ button,
   margin-bottom: 0.25rem;
 }
 
+.song-info {
+  min-width: 0;
+}
+
 .song-info h3,
 .song-info p,
 .track-row > span {
@@ -1173,18 +1177,19 @@ button,
 
 @media (max-width: 720px) {
   .app-shell {
-    padding-bottom: 190px;
+    padding-bottom: 225px;
   }
 
   .player-bar {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr) 44px 52px 44px;
     grid-template-areas:
-      "cover meta previous play next"
+      "cover meta meta meta meta"
+      ". previous play next ."
       "progress progress progress progress time"
       "volume volume volume volume volume";
     gap: 0.75rem;
-    min-height: 176px;
+    min-height: 210px;
     padding: 0.85rem 1rem calc(0.85rem + env(safe-area-inset-bottom));
   }
 
@@ -1254,13 +1259,13 @@ button,
 
 @media (max-width: 420px) {
   .app-shell {
-    padding-bottom: 205px;
+    padding-bottom: 235px;
   }
 
   .player-bar {
     grid-template-columns: 40px minmax(0, 1fr) 40px 48px 40px;
     gap: 0.65rem;
-    min-height: 190px;
+    min-height: 220px;
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
