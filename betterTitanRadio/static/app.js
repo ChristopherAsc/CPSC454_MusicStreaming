@@ -12,12 +12,15 @@ const previousTrackButton = document.querySelector("#previous-track");
 const nextTrackButton = document.querySelector("#next-track");
 const progressBar = document.querySelector("#progress-bar");
 const progressRange = document.querySelector("#progress-range");
+const volumeRange = document.querySelector("#volume-range");
 const timeCode = document.querySelector("#time-code");
 const uploadModal = document.querySelector("#upload-modal");
 
 const audioPlayer = document.querySelector("#audio-player") || new Audio();
 audioPlayer.preload = "metadata";
 window.btrAudioPlayer = audioPlayer;
+
+const volumeStorageKey = "btr-player-volume";
 
 let activeStreamUrl = "";
 let activeTrackIndex = -1;
@@ -101,11 +104,30 @@ function seekToPercent(percent) {
     updateTimeDisplay();
 }
 
+function syncVolumeControl() {
+    if (!volumeRange) {
+        return;
+    }
+
+    const currentVolume = Math.max(0, Math.min(1, audioPlayer.volume || 0));
+    volumeRange.value = String(Math.round(currentVolume * 100));
+}
+
+function applyVolume(level) {
+    const clampedVolume = Math.max(0, Math.min(1, Number(level) || 0));
+    audioPlayer.volume = clampedVolume;
+    localStorage.setItem(volumeStorageKey, String(clampedVolume));
+    syncVolumeControl();
+}
+
 function setPlaybackState(playing) {
     isPlaying = playing;
 
     if (playToggle) {
         playToggle.setAttribute("aria-label", playing ? "Pause" : "Play");
+        playToggle.setAttribute("aria-pressed", String(playing));
+        playToggle.setAttribute("data-state", playing ? "playing" : "paused");
+        playToggle.classList.toggle("is-playing", playing);
     }
 
     const playIcon = document.querySelector("#play-icon");
@@ -114,6 +136,8 @@ function setPlaybackState(playing) {
     if (playIcon && pauseIcon) {
         playIcon.hidden = playing;
         pauseIcon.hidden = !playing;
+        playIcon.style.display = playing ? "none" : "block";
+        pauseIcon.style.display = playing ? "block" : "none";
     }
 }
 
@@ -143,6 +167,43 @@ function findTrackIndex(streamUrl) {
     return playlist.findIndex((track) => track.streamUrl === streamUrl);
 }
 
+function beginPlayback() {
+    const attemptPlay = () => {
+        const playPromise = audioPlayer.play();
+
+        if (playPromise && typeof playPromise.then === "function") {
+            playPromise.then(() => {
+                setPlaybackState(true);
+            }).catch(() => {
+                setPlaybackState(false);
+            });
+            return;
+        }
+
+        setPlaybackState(true);
+    };
+
+    if (!audioPlayer.src) {
+        setPlaybackState(false);
+        return;
+    }
+
+    if (audioPlayer.readyState >= 2) {
+        attemptPlay();
+        return;
+    }
+
+    const onReady = () => {
+        audioPlayer.removeEventListener("loadedmetadata", onReady);
+        audioPlayer.removeEventListener("canplay", onReady);
+        attemptPlay();
+    };
+
+    audioPlayer.addEventListener("loadedmetadata", onReady, { once: true });
+    audioPlayer.addEventListener("canplay", onReady, { once: true });
+    audioPlayer.load();
+}
+
 function playTrack(index) {
     if (!playlist.length) {
         return;
@@ -156,15 +217,11 @@ function playTrack(index) {
     if (activeStreamUrl !== track.streamUrl) {
         activeStreamUrl = track.streamUrl;
         audioPlayer.src = track.streamUrl;
+        audioPlayer.load();
     }
 
     updateTimeDisplay();
-
-    audioPlayer.play().then(() => {
-        setPlaybackState(true);
-    }).catch(() => {
-        setPlaybackState(false);
-    });
+    beginPlayback();
 }
 
 function setNowPlaying(title, artist, streamUrl) {
@@ -184,12 +241,7 @@ function setNowPlaying(title, artist, streamUrl) {
     }
 
     updateTimeDisplay();
-
-    audioPlayer.play().then(() => {
-        setPlaybackState(true);
-    }).catch(() => {
-        setPlaybackState(false);
-    });
+    beginPlayback();
 }
 
 playButtons.forEach((button) => {
@@ -212,11 +264,7 @@ playToggle?.addEventListener("click", () => {
         audioPlayer.pause();
         setPlaybackState(false);
     } else {
-        audioPlayer.play().then(() => {
-            setPlaybackState(true);
-        }).catch(() => {
-            setPlaybackState(false);
-        });
+        beginPlayback();
     }
 });
 
@@ -230,6 +278,7 @@ nextTrackButton?.addEventListener("click", () => {
 
 audioPlayer.addEventListener("loadedmetadata", updateTimeDisplay);
 audioPlayer.addEventListener("timeupdate", updateTimeDisplay);
+audioPlayer.addEventListener("volumechange", syncVolumeControl);
 audioPlayer.addEventListener("pause", () => setPlaybackState(false));
 audioPlayer.addEventListener("play", () => setPlaybackState(true));
 audioPlayer.addEventListener("ended", () => {
@@ -244,6 +293,10 @@ progressRange?.addEventListener("input", () => {
     isSeeking = true;
     pendingSeekPercent = Number(progressRange.value);
     paintProgress(pendingSeekPercent);
+});
+
+volumeRange?.addEventListener("input", () => {
+    applyVolume(Number(volumeRange.value) / 100);
 });
 
 progressRange?.addEventListener("change", () => {
@@ -301,6 +354,13 @@ uploadModal?.addEventListener("click", (event) => {
         uploadModal.hidden = true;
     }
 });
+
+const storedVolume = Number(localStorage.getItem(volumeStorageKey));
+if (Number.isFinite(storedVolume)) {
+    applyVolume(storedVolume);
+} else {
+    applyVolume(audioPlayer.volume || 1);
+}
 
 setPlaybackState(false);
 updateTimeDisplay();

@@ -17,14 +17,15 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
   padding: 24px 24px 0;
   gap: 20px;
 }
@@ -330,15 +331,16 @@ body {
 .ctrl-btn {
   width: 42px;
   height: 42px;
-  border-radius: 50%;
-  border: 1.5px solid var(--panel-border);
+  border-radius: 0;
+  border: none;
   background: transparent;
   color: var(--text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+  padding: 0;
+  transition: transform 0.1s ease, color 0.15s ease;
 }
 
 .ctrl-btn svg {
@@ -347,8 +349,8 @@ body {
 }
 
 .ctrl-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--accent);
+  background: transparent;
+  color: var(--accent);
 }
 
 .ctrl-btn:active {
@@ -358,11 +360,12 @@ body {
 .ctrl-btn--play {
   width: 48px;
   height: 48px;
-  border-color: var(--accent);
+  border: none;
+  background: transparent;
 }
 
 .ctrl-btn--play[data-state="playing"] {
-  background: rgba(102, 153, 238, 0.16);
+  background: transparent;
 }
 
 .player__spacer {
@@ -587,6 +590,24 @@ button,
 .icon-button {
   background: #252b37;
   color: var(--text);
+}
+
+.download-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+}
+
+.download-button svg {
+  width: 50;
+  height: 50px;
+}
+
+.download-button:hover {
+  background: rgba(91, 140, 244, 0.16);
 }
 
 .danger-button {
@@ -837,8 +858,36 @@ button,
 }
 
 .player-bar .primary-control {
-  background: #252b37;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
   color: var(--text);
+  min-height: 56px;
+  min-width: 56px;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.player-bar .primary-control:hover {
+  background: rgba(91, 140, 244, 0.16);
+  color: #5B8CF4;
+  transform: translateY(-1px);
+}
+
+.player-bar .primary-control:active {
+  transform: scale(0.96);
+}
+
+.player-bar .primary-control img {
+  width: 50px;
+  height: 50px;
+  display: block;
+  object-fit: contain;
+}
+
+.player-bar .primary-control#play-toggle img {
+  width: 50px;
+  height: 50px;
 }
 
 .progress {
@@ -849,6 +898,26 @@ button,
   min-width: 120px;
   overflow: visible;
   position: relative;
+}
+
+.volume-control {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+.volume-label {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.volume-control input[type="range"] {
+  accent-color: #5B8CF4;
+  width: 100%;
 }
 
 .progress span {
