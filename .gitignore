@@ -3,7 +3,6 @@
 .env.*
 !.env.example
 
-<<<<<<< HEAD
 *.venv
 __pycache__/
 =======
@@ -50,4 +49,7 @@ temp
 # ignore tracks 
 
 tracks
->>>>>>> dev
+
+# other
+
+.python-version

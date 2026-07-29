@@ -221,6 +221,9 @@ def _serialize_track(request, track):
 
     return {
         "id": track.id,
+        # The PCM stream server addresses tracks by content hash, not by id or
+        # name, so the client needs the digest to ask for anything.
+        "sha256": track.sha256,
         "title": (
             track.title
             or track.original_filename
@@ -286,6 +289,7 @@ def _dashboard_track(request, track, index):
 
     return {
         "id": track.id,
+        "sha256": track.sha256,
         "title": track.display_title,
         "artist": track.display_artist,
         "album": track.album or "Unknown album",
@@ -313,6 +317,7 @@ def api_search(request):
     results = [
         {
             "id": t.id,
+            "sha256": t.sha256,
             "title": t.display_title,
             "artist": t.display_artist,
             "stream_url": f"/tracks/{t.id}/stream/",
@@ -526,6 +531,7 @@ def api_search(request):
     results = [
         {
             "id": track.id,
+            "sha256": track.sha256,
             "title": track.display_title,
             "artist": track.display_artist,
             "stream_url": f"/tracks/{track.id}/stream/",
@@ -593,6 +599,98 @@ def api_upload(request):
     return JsonResponse(
         response,
         status=201 if created else 200,
+    )
+
+
+@csrf_exempt
+@require_POST
+def api_upload_folder(request):
+    """Ingest many files at once -- everything playable in an uploaded folder.
+
+    A real music folder is not all music: it holds cover art, playlists and
+    stray dotfiles too. Those are *skipped* rather than treated as failures, so
+    one `folder.jpg` never makes an otherwise clean upload look broken.
+
+    Accepts any number of files under the `files` field, so a whole folder can
+    be posted in one request:
+
+        curl -F "files=@a.mp3" -F "files=@b.flac" .../api/tracks/upload-folder/
+
+    The dashboard instead posts one file per request, which bounds memory and
+    lets it report progress; both use this endpoint.
+    """
+    uploads = request.FILES.getlist("files")
+
+    if not uploads:
+        return JsonResponse(
+            {
+                "error": (
+                    "Upload one or more files using the multipart "
+                    "form field named 'files'."
+                )
+            },
+            status=400,
+        )
+
+    results = []
+    counts = {"created": 0, "duplicate": 0, "skipped": 0, "failed": 0}
+
+    for uploaded_file in uploads:
+        # Multipart carries only the basename, never the folder structure, so
+        # duplicates are caught by content hash rather than by path.
+        name = uploaded_file.name
+        extension = Path(name).suffix.lower()
+
+        if extension not in ALLOWED_AUDIO_EXTENSIONS:
+            counts["skipped"] += 1
+            results.append(
+                {
+                    "name": name,
+                    "status": "skipped",
+                    "reason": (
+                        f"{extension or 'no extension'} is not an audio format"
+                    ),
+                }
+            )
+            continue
+
+        try:
+            track, created, warning = _create_track(uploaded_file)
+        except ValueError as exc:
+            counts["failed"] += 1
+            results.append(
+                {"name": name, "status": "failed", "reason": str(exc)}
+            )
+            continue
+        except Exception as exc:
+            # One unreadable file must not abandon the rest of the folder.
+            counts["failed"] += 1
+            results.append(
+                {"name": name, "status": "failed", "reason": str(exc)}
+            )
+            continue
+
+        status = "created" if created else "duplicate"
+        counts[status] += 1
+
+        entry = {
+            "name": name,
+            "status": status,
+            "track": _serialize_track(request, track),
+        }
+
+        if warning:
+            entry["metadata_warning"] = warning
+
+        results.append(entry)
+
+    return JsonResponse(
+        {
+            "received": len(uploads),
+            "counts": counts,
+            "results": results,
+        },
+        status=201 if counts["created"] else 200,
     )
 
 

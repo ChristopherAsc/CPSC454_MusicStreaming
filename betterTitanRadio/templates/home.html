@@ -26,7 +26,7 @@
         <p id="hero-meta">Campus Radio · Ready to stream from the server library.</p>
         <div class="hero-actions">
             {% if tracks %}
-                <button type="button" data-play-title="{{ tracks.0.title }}" data-play-artist="{{ tracks.0.artist }}" data-stream-url="{{ tracks.0.stream_url }}">Play latest</button>
+                <button type="button" data-play-title="{{ tracks.0.title }}" data-play-artist="{{ tracks.0.artist }}" data-sha256="{{ tracks.0.sha256 }}" data-stream-url="{{ tracks.0.stream_url }}">Play latest</button>
                 <a class="secondary-button" href="{{ tracks.0.download_url }}">Download latest</a>
             {% else %}
                 <button class="secondary-button" type="button" data-upload-open>Upload music</button>
@@ -71,7 +71,7 @@
                 <span role="columnheader">Actions</span>
             </div>
             {% for track in tracks %}
-                <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" data-stream-url="{{ track.stream_url }}" role="row">
+                <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" data-sha256="{{ track.sha256 }}" data-stream-url="{{ track.stream_url }}" role="row">
                     <div class="track-main" role="cell">
                         <div class="cover" style="--accent: {{ track.accent }};">
                             <span>{{ track.title|slice:":1" }}</span>
@@ -85,7 +85,7 @@
                     <span role="cell">{{ track.format }}</span>
                     <span class="status-pill {{ track.status|lower }}" role="cell">{{ track.status }}</span>
                     <div class="row-actions" role="cell">
-                        <button type="button" data-play-title="{{ track.title }}" data-play-artist="{{ track.artist }}" data-stream-url="{{ track.stream_url }}">Play</button>
+                        <button type="button" data-play-title="{{ track.title }}" data-play-artist="{{ track.artist }}" data-sha256="{{ track.sha256 }}" data-stream-url="{{ track.stream_url }}">Play</button>
                         <a class="icon-button download-button" href="{{ track.download_url }}" aria-label="Download {{ track.title }}">
                             <img src="{% static 'images/download.svg' %}" alt="" aria-hidden="true">
                         </a>
@@ -141,6 +141,22 @@
             </label>
             <div id="upload-status" class="upload-status" role="status" aria-live="polite" hidden></div>
             <button class="wide-button" type="submit">Upload selected file</button>
+        </form>
+
+        <form class="modal-upload-form" method="post" action="{% url 'api_upload_folder' %}" enctype="multipart/form-data" data-folder-form>
+            {% csrf_token %}
+            <label class="drop-zone" for="modal-folder-upload">
+                <strong>...or choose a whole folder</strong>
+                <span>Every audio file inside is uploaded, subfolders included. Anything else (artwork, playlists) is skipped.</span>
+                {% comment %}
+                    webkitdirectory turns this into a directory picker. It is
+                    non-standard but supported by every current browser; where
+                    it is not, this degrades to an ordinary multi-file input.
+                {% endcomment %}
+                <input id="modal-folder-upload" type="file" name="files" webkitdirectory directory multiple>
+            </label>
+            <div id="folder-status" class="upload-status" role="status" aria-live="polite" hidden></div>
+            <button class="wide-button" type="submit" data-folder-submit>Upload folder</button>
         </form>
     </section>
 </div>

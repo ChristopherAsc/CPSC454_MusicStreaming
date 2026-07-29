@@ -20,6 +20,92 @@ run server using:
 `python manage.py runserver`
 make sure youre in the betterTitanRadio directory
 
+# Uploading
+
+The upload window takes either a single file or a **whole folder**. Choosing a
+folder uploads every audio file inside it, subfolders included; anything that
+isn't audio (cover art, playlists, `.DS_Store`) is skipped rather than counted
+as a failure, and files already in the library are recognised by content hash
+and reported as duplicates.
+
+The browser sends one file per request so progress is accurate and a large
+folder can be cancelled mid-way. The endpoint itself accepts any number of
+files, so a folder can also be posted in one go:
+
+```bash
+curl -F "files=@a.mp3" -F "files=@b.flac" \
+     http://127.0.0.1:8000/api/tracks/upload-folder/
+```
+
+It replies with per-file results and a summary:
+
+```json
+{"counts": {"created": 2, "duplicate": 0, "skipped": 1, "failed": 0}, "results": [...]}
+```
+
+A single request may carry up to `DATA_UPLOAD_MAX_NUMBER_FILES` files (1000 by
+default); the dashboard is unaffected, since it uploads one at a time.
+
+# Music streaming
+
+Playback does not use the `/tracks/<id>/stream/` HTTP endpoint. Tracks are
+streamed as raw PCM by a second server that speaks a custom TCP protocol, and
+the browser reaches it through a WebSocket bridge. Both are started by one
+command, in a **separate terminal** from `runserver`:
+
+```bash
+python manage.py runstreamserver
+```
+
+That needs the `ffmpeg` binary on your PATH (`sudo apt install ffmpeg`); the
+Python packages come from `requirements.txt`.
+
+So local development is two processes:
+
+```bash
+python manage.py runserver        # terminal 1 -- the site
+python manage.py runstreamserver  # terminal 2 -- audio streaming
+```
+
+Without terminal 2 the dashboard still loads, but pressing Play reports
+"Playback failed: cannot reach the stream bridge".
+
+## How a track is requested
+
+A client asks for a track by its **sha256**, not by file name. The server looks
+the digest up in the `Track` table and streams whatever file that row points at,
+so the protocol never carries a path and traversal is not expressible in it.
+
+```
+browser ──WebSocket(:8765)──▶ bridge ──TCP(:5001)──▶ stream server
+                                                          │ sha256 → Track
+                                                          ▼
+                                                    ffmpeg → raw PCM
+```
+
+Code lives in `betterTitanRadio/streaming/`:
+
+| File | Role |
+|------|------|
+| `protocol.py` | Wire format: status codes, struct layouts, digest validation. |
+| `resolver.py` | sha256 → `Track` → an opened, probed audio source. The only part that touches the database. |
+| `encoder.py` | Decodes a file object to PCM through ffmpeg. |
+| `instance.py` | One client connection plus its encoder. |
+| `server.py` | Accepts clients, one thread per stream, caps concurrency. |
+| `bridge.py` | WebSocket↔TCP relay, so browsers can reach the server. |
+
+The browser side is `betterTitanRadio/static/pcm_player.js`, which plays the PCM
+with the Web Audio API and supports seek, pause/resume and replay.
+
+Ports and limits come from settings (`STREAM_SERVER_PORT`, `STREAM_BRIDGE_PORT`,
+`STREAM_MAX_INSTANCES`, `STREAM_BRIDGE_URL`), each overridable by an environment
+variable, and `runstreamserver` takes matching flags. Set `STREAM_BRIDGE_URL`
+when the browser reaches the bridge at a different address than it binds to
+(behind a proxy, or on EC2 — where it must also be `wss://`).
+
+`music_stream_testing/` is the original standalone prototype this was built
+from. It still speaks the older file-name protocol and is not used by the site.
+
 # How we will work through this on github
 
 

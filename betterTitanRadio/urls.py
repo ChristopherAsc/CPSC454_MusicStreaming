@@ -23,6 +23,11 @@ urlpatterns = [
         views.api_upload,
         name="api_upload",
     ),
+    path(
+        "api/tracks/upload-folder/",
+        views.api_upload_folder,
+        name="api_upload_folder",
+    ),
 
     path(
         "tracks/<int:track_id>/stream/",
