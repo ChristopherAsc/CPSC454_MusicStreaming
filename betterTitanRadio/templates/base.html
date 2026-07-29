@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Better Titan Radio</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Main navigation">
+            <div class="brand">
+                <span class="brand-mark">BTR</span>
+                <div>
+                    <p class="eyebrow">CPSC 454</p>
+                    <h1>Better Titan Radio</h1>
+                </div>
+            </div>
+            
+            <nav class="nav-links">
+                <a href="{% url 'home' %}">Dashboard</a>
+                <a href="{% url 'upload' %}" data-upload-open>Upload</a>
+                <a href="{% url 'api_tracks' %}">JSON API</a>
+                <a href="{% url 'test' %}">Test</a>
+                <a href="/admin/">Admin</a>
+            </nav>
+        </aside>
+
+        <main id="dashboard" class="content">
+            {% block content %}{% endblock %}
+        </main>
+        <footer class="player-bar" aria-label="Now playing">
+            <audio id="audio-player" preload="metadata"></audio>
+            <div id="player-cover" class="mini-cover">T</div>
+            <div class="player-meta">
+                <strong id="player-title">Titan Nights</strong>
+                <span id="player-artist">Campus Radio</span>
+            </div>
+            <button id="previous-track" type="button" aria-label="Previous song" class="primary-control icon-button">
+                <img src="{% static 'images/rewind.svg' %}" alt="Previous" class="image-button">
+            </button>
+            <button id="play-toggle" class="primary-control" type="button" aria-label="Play or pause">
+                <img id="play-icon" src="{% static 'images/play.svg' %}" alt="Play" class="image-button">
+                <img id="pause-icon" src="{% static 'images/pause.svg' %}" alt="Pause" hidden>
+            </button>
+            <button id="next-track" type="button" aria-label="Next song" class="primary-control icon-button">
+                <img src="{% static 'images/fastforward.svg' %}" alt="Next" class="image-button">
+            </button>
+            <label class="progress" aria-label="Playback position">
+                <input id="progress-range" type="range" min="0" max="100" value="0" step="0.1">
+                <span id="progress-bar"></span>
+            </label>
+            <label class="volume-control" aria-label="Volume">
+                <span class="volume-label">Vol</span>
+                <input id="volume-range" type="range" min="0" max="100" value="100" step="1">
+            </label>
+            <span id="time-code" class="time-code">0:00 / 0:00</span>
+        </footer>
+    </div>
+    <script src="{% static 'app.js' %}?v=4"></script>
+</body>
+</html>

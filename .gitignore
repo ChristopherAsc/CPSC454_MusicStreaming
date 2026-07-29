@@ -1,4 +1,53 @@
-# ignore the venv file (i named my venv file .venv)
+# Passwords and environment variables
+.env
+.env.*
+!.env.example
 
+<<<<<<< HEAD
 *.venv
 __pycache__/
+=======
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Local databases and uploaded files
+db.sqlite3
+*.sqlite3
+media/
+staticfiles/
+
+# AWS and SSH keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editors
+.vscode/
+.idea/
+# Python-generated cache files
+__pycache__/
+*.py[cod]
+
+# Local secrets and runtime files
+.env
+.venv/
+media/
+db.sqlite3
+staticfiles/
+
+# Temporary backup files
+*.bak
+
+
+temp
+
+# ignore tracks 
+
+tracks
+>>>>>>> dev

@@ -1,0 +1,538 @@
+[1mdiff --git a/.env.example b/.env.example[m
+[1mindex b4e762f..97acffc 100644[m
+[1m--- a/.env.example[m
+[1m+++ b/.env.example[m
+[36m@@ -1,6 +1,11 @@[m
+[31m-# if these aren't set, it'll use the default sqlite3 instead[m
+[31m-DB_NAME=[m
+[31m-DB_USER=[m
+[31m-DB_PASSWORD=[m
+[31m-DB_HOST=[m
+[32m+[m[32mUSE_SQLITE=false[m
+[32m+[m
+[32m+[m[32mDB_NAME=radio[m
+[32m+[m[32mDB_USER=admin[m
+[32m+[m[32mDB_PASSWORD=replace_with_database_password[m
+[32m+[m[32mDB_HOST=replace_with_rds_endpoint[m
+ DB_PORT=3306[m
+[32m+[m
+[32m+[m[32mDJANGO_SECRET_KEY=replace_with_django_secret[m
+[32m+[m[32mDJANGO_DEBUG=true[m
+[32m+[m[32mDJANGO_ALLOWED_HOSTS=localhost,127.0.0.1[m
+\ No newline at end of file[m
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex 60001de..93b5253 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -1,23 +1,28 @@[m
+[31m-# ignore the venv file (i named my venv file .venv)[m
+[31m-[m
+[31m-*.venv[m
+[31m-[m
+[31m-[m
+[31m-#ignoring sqlite3 file that is generated with django[m
+[31m-[m
+[31m-*.sqlite3[m
+[31m-[m
+[31m-[m
+[31m-#ignore dev vscode settings[m
+[31m-[m
+[31m-*.vscode[m
+[31m-[m
+[31m-#ignore local environment/secrets file[m
+[31m-[m
+[32m+[m[32m# Passwords and environment variables[m
+ .env[m
+[32m+[m[32m.env.*[m
+[32m+[m[32m!.env.example[m
+ [m
+[32m+[m[32m# Virtual environments[m
+[32m+[m[32m.venv/[m
+[32m+[m[32mvenv/[m
+ [m
+[31m-# ignore Python files generated when Django runs[m
+[31m-[m
+[32m+[m[32m# Python[m
+ __pycache__/[m
+[31m-*.pyc[m
+[32m+[m[32m*.py[cod][m
+[32m+[m
+[32m+[m[32m# Local databases and uploaded files[m
+[32m+[m[32mdb.sqlite3[m
+[32m+[m[32m*.sqlite3[m
+[32m+[m[32mmedia/[m
+[32m+[m[32mstaticfiles/[m
+[32m+[m
+[32m+[m[32m# AWS and SSH keys[m
+[32m+[m[32m*.pem[m
+[32m+[m[32m*.key[m
+[32m+[m[32m*.p12[m
+[32m+[m[32m*.pfx[m
+[32m+[m
+[32m+[m[32m# Editors[m
+[32m+[m[32m.vscode/[m
+[32m+[m[32m.idea/[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/data/music/BLOOD ORANGE - Champagne Coast.mp3 b/betterTitanRadio/data/music/BLOOD ORANGE - Champagne Coast.mp3[m
+[1mnew file mode 100644[m
+[1mindex 0000000..a643719[m
+Binary files /dev/null and b/betterTitanRadio/data/music/BLOOD ORANGE - Champagne Coast.mp3 differ
+[1mdiff --git a/betterTitanRadio/data/music/FIDLAR - Gimmie Something.mp3 b/betterTitanRadio/data/music/FIDLAR - Gimmie Something.mp3[m
+[1mnew file mode 100644[m
+[1mindex 0000000..4c8789b[m
+Binary files /dev/null and b/betterTitanRadio/data/music/FIDLAR - Gimmie Something.mp3 differ
+[1mdiff --git a/betterTitanRadio/data/music/Frank Ocean - Monks.mp3 b/betterTitanRadio/data/music/Frank Ocean - Monks.mp3[m
+[1mnew file mode 100644[m
+[1mindex 0000000..1b3a179[m
+Binary files /dev/null and b/betterTitanRadio/data/music/Frank Ocean - Monks.mp3 differ
+[1mdiff --git a/betterTitanRadio/data/music/Louie Zong - TUNA TURNPIKE.mp3 b/betterTitanRadio/data/music/Louie Zong - TUNA TURNPIKE.mp3[m
+[1mnew file mode 100644[m
+[1mindex 0000000..7f8fd4a[m
+Binary files /dev/null and b/betterTitanRadio/data/music/Louie Zong - TUNA TURNPIKE.mp3 differ
+[1mdiff --git a/betterTitanRadio/data/music/Malcolm Todd - Earrings.mp3 b/betterTitanRadio/data/music/Malcolm Todd - Earrings.mp3[m
+[1mnew file mode 100644[m
+[1mindex 0000000..0b416d6[m
+Binary files /dev/null and b/betterTitanRadio/data/music/Malcolm Todd - Earrings.mp3 differ
+[1mdiff --git a/betterTitanRadio/data/music/Million Eyes - In Your Dreams.mp3 b/betterTitanRadio/data/music/Million Eyes - In Your Dreams.mp3[m
+[1mnew file mode 100644[m
+[1mindex 0000000..3222e13[m
+Binary files /dev/null and b/betterTitanRadio/data/music/Million Eyes - In Your Dreams.mp3 differ
+[1mdiff --git "a/betterTitanRadio/data/music/The Mar\303\255as - Cari\303\261o.mp3" "b/betterTitanRadio/data/music/The Mar\303\255as - Cari\303\261o.mp3"[m
+[1mnew file mode 100644[m
+[1mindex 0000000..d7951a3[m
+Binary files /dev/null and "b/betterTitanRadio/data/music/The Mar\303\255as - Cari\303\261o.mp3" differ
+[1mdiff --git a/betterTitanRadio/forms.py b/betterTitanRadio/forms.py[m
+[1mnew file mode 100644[m
+[1mindex 0000000..9d951df[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/forms.py[m
+[36m@@ -0,0 +1,23 @@[m
+[32m+[m[32mfrom pathlib import Path[m
+[32m+[m
+[32m+[m[32mfrom django import forms[m
+[32m+[m
+[32m+[m
+[32m+[m[32mALLOWED_AUDIO_EXTENSIONS = {[m
+[32m+[m[32m    ".mp3",[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m
+[32m+[m[32mclass TrackUploadForm(forms.Form):[m
+[32m+[m[32m    file = forms.FileField()[m
+[32m+[m
+[32m+[m[32m    def clean_file(self):[m
+[32m+[m[32m        uploaded = self.cleaned_data["file"][m
+[32m+[m[32m        extension = Path(uploaded.name).suffix.lower()[m
+[32m+[m
+[32m+[m[32m        if extension not in ALLOWED_AUDIO_EXTENSIONS:[m
+[32m+[m[32m            raise forms.ValidationError([m
+[32m+[m[32m                "Unsupported audio format."[m
+[32m+[m[32m            )[m
+[32m+[m
+[32m+[m[32m        return uploaded[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/images/fastforward.svg b/betterTitanRadio/images/fastforward.svg[m
+[1mnew file mode 100644[m
+[1mindex 0000000..765d533[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/images/fastforward.svg[m
+[36m@@ -0,0 +1,10 @@[m
+[32m+[m[32m<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">[m
+[32m+[m[32m<g clip-path="url(#clip0_2_94)">[m
+[32m+[m[32m<path d="M16 0C24.8247 0 32 7.1753 32 16C32 24.8247 24.8247 32 16 32C7.17529 32 0 24.8247 0 16C0 7.1753 7.17529 0 16 0ZM16 2C8.25617 2 2 8.25615 2 16C2 23.7438 8.25617 30 16 30C23.7438 30 30 23.7438 30 16C30 8.25615 23.7438 2 16 2ZM17 10L25 16L17 22V16V10ZM17 16L9 22V10L17 16Z" fill="black"/>[m
+[32m+[m[32m</g>[m
+[32m+[m[32m<defs>[m
+[32m+[m[32m<clipPath id="clip0_2_94">[m
+[32m+[m[32m<rect width="32" height="32" fill="black"/>[m
+[32m+[m[32m</clipPath>[m
+[32m+[m[32m</defs>[m
+[32m+[m[32m</svg>[m
+[1mdiff --git a/betterTitanRadio/images/pause.svg b/betterTitanRadio/images/pause.svg[m
+[1mnew file mode 100644[m
+[1mindex 0000000..121b792[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/images/pause.svg[m
+[36m@@ -0,0 +1,10 @@[m
+[32m+[m[32m<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">[m
+[32m+[m[32m<g clip-path="url(#clip0_2_88)">[m
+[32m+[m[32m<path d="M18 10H22V22H18V10ZM10 10H14V22H10V10ZM16 0.00299072C7.17529 0.00299072 0.00297546 7.1753 0.00297546 16C0.00297546 24.8247 7.17529 31.997 16 31.997C24.8247 31.997 31.997 24.8247 31.997 16C31.997 7.1753 24.8247 0.00299072 16 0.00299072ZM16 1.99701C23.7438 1.99701 30.003 8.25615 30.003 16C30.003 23.7438 23.7438 30.0029 16 30.0029C8.25617 30.0029 1.99702 23.7438 1.99702 16C1.99702 8.25615 8.25617 1.99701 16 1.99701Z" fill="black"/>[m
+[32m+[m[32m</g>[m
+[32m+[m[32m<defs>[m
+[32m+[m[32m<clipPath id="clip0_2_88">[m
+[32m+[m[32m<rect width="32" height="32" fill="black"/>[m
+[32m+[m[32m</clipPath>[m
+[32m+[m[32m</defs>[m
+[32m+[m[32m</svg>[m
+[1mdiff --git a/betterTitanRadio/images/play.svg b/betterTitanRadio/images/play.svg[m
+[1mnew file mode 100644[m
+[1mindex 0000000..e5addba[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/images/play.svg[m
+[36m@@ -0,0 +1,10 @@[m
+[32m+[m[32m<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">[m
+[32m+[m[32m<g clip-path="url(#clip0_2_95)">[m
+[32m+[m[32m<path d="M24 16L12 23.9999V8L24 16ZM16 0.00299072C7.17529 0.00299072 0.00297546 7.1753 0.00297546 16C0.00297546 24.8247 7.17529 31.997 16 31.997C24.8247 31.997 31.997 24.8247 31.997 16C31.997 7.1753 24.8247 0.00299072 16 0.00299072ZM16 1.99704C23.7438 1.99704 30.003 8.2562 30.003 16C30.003 23.7438 23.7438 30.0029 16 30.0029C8.25617 30.0029 1.99703 23.7438 1.99703 16C1.99703 8.2562 8.25617 1.99704 16 1.99704Z" fill="black"/>[m
+[32m+[m[32m</g>[m
+[32m+[m[32m<defs>[m
+[32m+[m[32m<clipPath id="clip0_2_95">[m
+[32m+[m[32m<rect width="32" height="32" fill="black"/>[m
+[32m+[m[32m</clipPath>[m
+[32m+[m[32m</defs>[m
+[32m+[m[32m</svg>[m
+[1mdiff --git a/betterTitanRadio/images/rewind.svg b/betterTitanRadio/images/rewind.svg[m
+[1mnew file mode 100644[m
+[1mindex 0000000..272286e[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/images/rewind.svg[m
+[36m@@ -0,0 +1,10 @@[m
+[32m+[m[32m<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">[m
+[32m+[m[32m<g clip-path="url(#clip0_2_78)">[m
+[32m+[m[32m<path d="M16 0C7.17529 0 0 7.1753 0 16C0 24.8247 7.17529 32 16 32C24.8247 32 32 24.8247 32 16C32 7.1753 24.8247 0 16 0ZM16 2C23.7438 2 30 8.25615 30 16C30 23.7438 23.7438 30 16 30C8.25617 30 2 23.7438 2 16C2 8.25615 8.25617 2 16 2ZM15 10L7 16L15 22V16V10ZM15 16L23 22V10L15 16Z" fill="black"/>[m
+[32m+[m[32m</g>[m
+[32m+[m[32m<defs>[m
+[32m+[m[32m<clipPath id="clip0_2_78">[m
+[32m+[m[32m<rect width="32" height="32" fill="black"/>[m
+[32m+[m[32m</clipPath>[m
+[32m+[m[32m</defs>[m
+[32m+[m[32m</svg>[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/services.py b/betterTitanRadio/services.py[m
+[1mnew file mode 100644[m
+[1mindex 0000000..2df8f15[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/services.py[m
+[36m@@ -0,0 +1,169 @@[m
+[32m+[m[32mimport hashlib[m
+[32m+[m[32mimport mimetypes[m
+[32m+[m[32mimport re[m
+[32m+[m[32mfrom pathlib import Path[m
+[32m+[m[32mfrom typing import Any[m
+[32m+[m
+[32m+[m[32mfrom mutagen import File as MutagenFile[m
+[32m+[m
+[32m+[m[32mfrom .forms import ALLOWED_AUDIO_EXTENSIONS[m
+[32m+[m[32mfrom .models import Track[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _first_tag(tags: Any, *keys: str) -> str:[m
+[32m+[m[32m    for key in keys:[m
+[32m+[m[32m        value = tags.get(key)[m
+[32m+[m
+[32m+[m[32m        if not value:[m
+[32m+[m[32m            continue[m
+[32m+[m
+[32m+[m[32m        if isinstance(value, (list, tuple)):[m
+[32m+[m[32m            value = value[0][m
+[32m+[m
+[32m+[m[32m        text = str(value).strip()[m
+[32m+[m
+[32m+[m[32m        if text:[m
+[32m+[m[32m            return text[m
+[32m+[m
+[32m+[m[32m    return ""[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _parse_number(value: str) -> int | None:[m
+[32m+[m[32m    if not value:[m
+[32m+[m[32m        return None[m
+[32m+[m
+[32m+[m[32m    try:[m
+[32m+[m[32m        return int(value.split("/", 1)[0].strip())[m
+[32m+[m[32m    except (TypeError, ValueError):[m
+[32m+[m[32m        return None[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _parse_year(value: str) -> int | None:[m
+[32m+[m[32m    if not value:[m
+[32m+[m[32m        return None[m
+[32m+[m
+[32m+[m[32m    match = re.search(r"\b(18|19|20|21)\d{2}\b", value)[m
+[32m+[m
+[32m+[m[32m    if match:[m
+[32m+[m[32m        return int(match.group(0))[m
+[32m+[m
+[32m+[m[32m    return None[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef _hash_upload(uploaded_file) -> str:[m
+[32m+[m[32m    digest = hashlib.sha256()[m
+[32m+[m
+[32m+[m[32m    for chunk in uploaded_file.chunks():[m
+[32m+[m[32m        digest.update(chunk)[m
+[32m+[m
+[32m+[m[32m    uploaded_file.seek(0)[m
+[32m+[m
+[32m+[m[32m    return digest.hexdigest()[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef extract_metadata(file_path: str | Path) -> dict:[m
+[32m+[m[32m    path = Path(file_path)[m
+[32m+[m[32m    audio = MutagenFile(path, easy=True)[m
+[32m+[m
+[32m+[m[32m    if audio is None:[m
+[32m+[m[32m        return {[m
+[32m+[m[32m            "title": path.stem,[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m    tags = audio.tags or {}[m
+[32m+[m[32m    info = audio.info[m
+[32m+[m
+[32m+[m[32m    date_value = _first_tag([m
+[32m+[m[32m        tags,[m
+[32m+[m[32m        "date",[m
+[32m+[m[32m        "originaldate",[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    genre_values = tags.get("genre") or [][m
+[32m+[m
+[32m+[m[32m    if isinstance(genre_values, str):[m
+[32m+[m[32m        genre_values = [genre_values][m
+[32m+[m
+[32m+[m[32m    genre = ", ".join([m
+[32m+[m[32m        dict.fromkeys([m
+[32m+[m[32m            str(value).strip()[m
+[32m+[m[32m            for value in genre_values[m
+[32m+[m[32m            if str(value).strip()[m
+[32m+[m[32m        )[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    bitrate = getattr(info, "bitrate", None)[m
+[32m+[m
+[32m+[m[32m    return {[m
+[32m+[m[32m        "title": ([m
+[32m+[m[32m            _first_tag(tags, "title")[m
+[32m+[m[32m            or path.stem[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        "artist": _first_tag(tags, "artist"),[m
+[32m+[m[32m        "album": _first_tag(tags, "album"),[m
+[32m+[m[32m        "album_artist": _first_tag([m
+[32m+[m[32m            tags,[m
+[32m+[m[32m            "albumartist",[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        "genre": genre,[m
+[32m+[m[32m        "year": _parse_year(date_value),[m
+[32m+[m[32m        "track_number": _parse_number([m
+[32m+[m[32m            _first_tag(tags, "tracknumber")[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        "disc_number": _parse_number([m
+[32m+[m[32m            _first_tag(tags, "discnumber")[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        "duration_seconds": getattr([m
+[32m+[m[32m            info,[m
+[32m+[m[32m            "length",[m
+[32m+[m[32m            None,[m
+[32m+[m[32m        ),[m
+[32m+[m[32m        "bitrate_kbps": ([m
+[32m+[m[32m            round(bitrate / 1000)[m
+[32m+[m[32m            if bitrate[m
+[32m+[m[32m            else None[m
+[32m+[m[32m        ),[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m
+[32m+[m[32mdef create_track(uploaded_file) -> tuple[Track, bool]:[m
+[32m+[m[32m    extension = Path([m
+[32m+[m[32m        uploaded_file.name[m
+[32m+[m[32m    ).suffix.lower()[m
+[32m+[m
+[32m+[m[32m    if extension not in ALLOWED_AUDIO_EXTENSIONS:[m
+[32m+[m[32m        raise ValueError("Unsupported audio format.")[m
+[32m+[m
+[32m+[m[32m    sha256 = _hash_upload(uploaded_file)[m
+[32m+[m
+[32m+[m[32m    existing = Track.objects.filter([m
+[32m+[m[32m        sha256=sha256,[m
+[32m+[m[32m    ).first()[m
+[32m+[m
+[32m+[m[32m    if existing:[m
+[32m+[m[32m        return existing, False[m
+[32m+[m
+[32m+[m[32m    mime_type, _ = mimetypes.guess_type([m
+[32m+[m[32m        uploaded_file.name[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    track = Track([m
+[32m+[m[32m        file=uploaded_file,[m
+[32m+[m[32m        original_filename=uploaded_file.name,[m
+[32m+[m[32m        file_size=uploaded_file.size,[m
+[32m+[m[32m        mime_type=mime_type or "audio/mpeg",[m
+[32m+[m[32m        sha256=sha256,[m
+[32m+[m[32m    )[m
+[32m+[m
+[32m+[m[32m    # file must exist on disk before mutagen reads it.[m
+[32m+[m[32m    track.save()[m
+[32m+[m
+[32m+[m[32m    metadata = extract_metadata(track.file.path)[m
+[32m+[m
+[32m+[m[32m    for field, value in metadata.items():[m
+[32m+[m[32m        if value not in (None, ""):[m
+[32m+[m[32m            setattr(track, field, value)[m
+[32m+[m
+[32m+[m[32m    track.save()[m
+[32m+[m
+[32m+[m[32m    return track, True[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/templates/base.html b/betterTitanRadio/templates/base.html[m
+[1mnew file mode 100644[m
+[1mindex 0000000..41e436e[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/templates/base.html[m
+[36m@@ -0,0 +1,69 @@[m
+[32m+[m[32m{% load static %}[m
+[32m+[m[32m<!DOCTYPE html>[m
+[32m+[m[32m<html lang="en">[m
+[32m+[m[32m<head>[m
+[32m+[m[32m    <meta charset="UTF-8">[m
+[32m+[m[32m    <meta name="viewport" content="width=device-width, initial-scale=1.0">[m
+[32m+[m[32m    <title>Better Titan Radio</title>[m
+[32m+[m[32m    <link rel="stylesheet" href="{% static 'styles.css' %}">[m
+[32m+[m[32m</head>[m
+[32m+[m[32m<body>[m
+[32m+[m[32m    <div class="app-shell">[m
+[32m+[m[32m        <aside class="sidebar" aria-label="Main navigation">[m
+[32m+[m[32m            <div class="brand">[m
+[32m+[m[32m                <span class="brand-mark">BTR</span>[m
+[32m+[m[32m                <div>[m
+[32m+[m[32m                    <p class="eyebrow">CPSC 454</p>[m
+[32m+[m[32m                    <h1>Better Titan Radio</h1>[m
+[32m+[m[32m                </div>[m
+[32m+[m[32m            </div>[m
+[32m+[m[41m            [m
+[32m+[m[32m            {% comment %} /* ---------------------- these currently don't work ---------------------- */ {% endcomment %}[m
+[32m+[m[32m            <nav class="nav-links">[m
+[32m+[m[32m                <a href="{% url 'home' %}">Dashboard</a>[m
+[32m+[m[32m                <a href="{% url 'profile' %}">Profile</a>[m
+[32m+[m[32m                <a href="/admin/">Admin</a>[m
+[32m+[m[32m            </nav>[m
+[32m+[m
+[32m+[m[32m            <section class="server-panel" aria-labelledby="server-heading">[m
+[32m+[m[32m                <h2 id="server-heading">Server Connection</h2>[m
+[32m+[m[32m                <ul>[m
+[32m+[m[32m                    <li><span></span>Django dev server</li>[m
+[32m+[m[32m                    <li><span></span>SQLite music index</li>[m
+[32m+[m[32m                    <li><span></span>VPN tunnel placeholder</li>[m
+[32m+[m[32m                </ul>[m
+[32m+[m[32m            </section>[m
+[32m+[m[32m        </aside>[m
+[32m+[m
+[32m+[m[32m        {% comment %} /* ---------------------------------------------------------------------------- */[m
+[32m+[m[32m        /*                             the content goes here                            */[m
+[32m+[m[32m        /* ---------------------------------------------------------------------------- */ {% endcomment %}[m
+[32m+[m[32m        <main id="dashboard" class="content">[m
+[32m+[m[32m            {% block content %}{% endblock %}[m
+[32m+[m[32m        </main>[m
+[32m+[m[32m        {% comment %} /* ---------------------------------------------------------------------------- */ {% endcomment %}[m
+[32m+[m[32m        <footer class="player-bar" aria-label="Now playing">[m
+[32m+[m[32m            <div id="player-cover" class="mini-cover">T</div>[m
+[32m+[m[32m            <div class="player-meta">[m
+[32m+[m[32m                <strong id="player-title">Titan Nights</strong>[m
+[32m+[m[32m                <span id="player-artist">Campus Radio</span>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m            <button type="button" aria-label="Previous song" class="primary-control icon-button">[m
+[32m+[m[32m                <img src="{% static 'images/rewind.svg' %}" alt="Previous" class="image-button">[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m            <button id="play-toggle" class="primary-control" type="button" aria-label="Play or pause">[m
+[32m+[m[32m                <img id="play-icon" src="{% static 'images/play.svg' %}" alt="Play" class="image-button">[m
+[32m+[m[32m                <img id="pause-icon" src="{% static 'images/pause.svg' %}" alt="Pause" hidden>[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m            <button type="button" aria-label="Next song" class="primary-control icon-button">[m
+[32m+[m[32m                <img src="{% static 'images/fastforward.svg' %}" alt="Next" class="image-button">[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m            <div class="progress" aria-hidden="true">[m
+[32m+[m[32m                <span id="progress-bar"></span>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m            <span class="time-code">1:34 / 3:42</span>[m
+[32m+[m[32m        </footer>[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m    <script src="{% static 'app.js' %}?v=2"></script>[m
+[32m+[m[32m</body>[m
+[32m+[m[32m</html>[m
+[1mdiff --git a/betterTitanRadio/templates/index.html b/betterTitanRadio/templates/index.html[m
+[1mnew file mode 100644[m
+[1mindex 0000000..35961ff[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/templates/index.html[m
+[36m@@ -0,0 +1,35 @@[m
+[32m+[m[32m<h1>Better Titan Radio</h1>[m
+[32m+[m
+[32m+[m[32m<p>[m
+[32m+[m[32m    <a href="{% url 'radio:upload' %}">[m
+[32m+[m[32m        Upload music[m
+[32m+[m[32m    </a>[m
+[32m+[m[32m</p>[m
+[32m+[m
+[32m+[m[32m{% for track in tracks %}[m
+[32m+[m[32m    <article>[m
+[32m+[m[32m        <h2>{{ track.display_title }}</h2>[m
+[32m+[m
+[32m+[m[32m        <p>[m
+[32m+[m[32m            Artist: {{ track.display_artist }}<br>[m
+[32m+[m[32m            Album: {{ track.album|default:"Unknown album" }}<br>[m
+[32m+[m[32m            Year: {{ track.year|default:"Unknown" }}<br>[m
+[32m+[m[32m            Genre: {{ track.genre|default:"Unknown" }}[m
+[32m+[m[32m        </p>[m
+[32m+[m
+[32m+[m[32m        <audio controls preload="metadata">[m
+[32m+[m[32m            <source[m
+[32m+[m[32m                src="{% url 'radio:stream' track.id %}"[m
+[32m+[m[32m                type="{{ track.mime_type }}"[m
+[32m+[m[32m            >[m
+[32m+[m[32m        </audio>[m
+[32m+[m
+[32m+[m[32m        <p>[m
+[32m+[m[32m            <a href="{% url 'radio:download' track.id %}">[m
+[32m+[m[32m                Download[m
+[32m+[m[32m            </a>[m
+[32m+[m[32m        </p>[m
+[32m+[m[32m    </article>[m
+[32m+[m[32m{% empty %}[m
+[32m+[m[32m    <p>No music has been uploaded.</p>[m
+[32m+[m[32m{% endfor %}[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/templates/profile.html b/betterTitanRadio/templates/profile.html[m
+[1mnew file mode 100644[m
+[1mindex 0000000..690d157[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/templates/profile.html[m
+[36m@@ -0,0 +1,6 @@[m
+[32m+[m[32m{% extends "base.html" %}[m
+[32m+[m
+[32m+[m
+[32m+[m[32m{% block content %}[m
+[32m+[m[32m    <h1> the profile page </h1>[m
+[32m+[m[32m{% endblock content %}[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/templates/search.html b/betterTitanRadio/templates/search.html[m
+[1mnew file mode 100644[m
+[1mindex 0000000..48f2d56[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/templates/search.html[m
+[36m@@ -0,0 +1,6 @@[m
+[32m+[m[32m{% extends "base.html" %}[m
+[32m+[m
+[32m+[m
+[32m+[m[32m{% block content %}[m
+[32m+[m[32m    <h1> search </h1>[m
+[32m+[m[32m{% endblock content %}[m
+\ No newline at end of file[m
+[1mdiff --git a/betterTitanRadio/templates/upload.html b/betterTitanRadio/templates/upload.html[m
+[1mnew file mode 100644[m
+[1mindex 0000000..1894071[m
+[1m--- /dev/null[m
+[1m+++ b/betterTitanRadio/templates/upload.html[m
+[36m@@ -0,0 +1,14 @@[m
+[32m+[m[32m<h1>Upload Music</h1>[m
+[32m+[m
+[32m+[m[32m<form method="post" enctype="multipart/form-data">[m
+[32m+[m[32m    {% csrf_token %}[m
+[32m+[m[32m    {{ form.as_p }}[m
+[32m+[m
+[32m+[m[32m    <button type="submit">[m
+[32m+[m[32m        Upload[m
+[32m+[m[32m    </button>[m
+[32m+[m[32m</form>[m
+[32m+[m
+[32m+[m[32m<a href="{% url 'radio:index' %}">[m
+[32m+[m[32m    Back to library[m
+[32m+[m[32m</a>[m
+\ No newline at end of file[m
