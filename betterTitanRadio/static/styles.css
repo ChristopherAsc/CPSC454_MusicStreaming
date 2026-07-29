@@ -560,6 +560,7 @@ body {
 
 .hero-copy {
   max-width: 620px;
+  min-width: 0;
 }
 
 .hero-copy h2 {
@@ -667,6 +668,65 @@ button,
 .visualizer span:nth-child(5) {
   animation-delay: 0.4s;
   height: 55%;
+}
+
+@media (max-width: 720px) {
+  .hero {
+    align-items: flex-start;
+    display: grid;
+    gap: 1.25rem;
+    min-height: 0;
+    padding: 1.25rem;
+  }
+
+  .hero-copy {
+    max-width: 100%;
+  }
+
+  .hero-copy h2 {
+    font-size: 2.25rem;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-copy p:not(.eyebrow) {
+    font-size: 0.98rem;
+    overflow-wrap: anywhere;
+  }
+
+  .visualizer {
+    height: 74px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .visualizer span {
+    width: 18px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero {
+    padding: 1rem;
+  }
+
+  .hero-copy h2 {
+    font-size: 1.95rem;
+  }
+
+  .hero-actions {
+    display: grid;
+    width: 100%;
+  }
+
+  .hero-actions button,
+  .hero-actions .secondary-button {
+    width: 100%;
+  }
+
+  .visualizer {
+    display: none;
+  }
 }
 
 .metric-grid {
