@@ -14,6 +14,11 @@ urlpatterns = [
         name="api_tracks",
     ),
     path(
+        "api/search/",
+        views.api_search,
+        name="api_search",
+    ),
+    path(
         "api/tracks/upload/",
         views.api_upload,
         name="api_upload",

@@ -9,10 +9,14 @@
         <p class="eyebrow">Cloud music dashboard</p>
         <h2>Stream, upload, download, and monitor your personal Titan music server.</h2>
     </div>
+<div class="search-wrapper">
     <form class="search-form" role="search" onsubmit="return false;">
         <label for="song-search">Search</label>
-        <input id="song-search" type="search" placeholder="Search songs or artists">
+        <input id="song-search" type="search" placeholder="Search songs or artists" autocomplete="off">
     </form>
+    <ul id="search-dropdown" class="search-dropdown" hidden></ul>
+</div>
+
 </header>
 
 <section class="hero">
