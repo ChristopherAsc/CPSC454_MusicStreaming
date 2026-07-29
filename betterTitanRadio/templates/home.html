@@ -74,7 +74,14 @@
                 <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" data-sha256="{{ track.sha256 }}" data-stream-url="{{ track.stream_url }}" role="row">
                     <div class="track-main" role="cell">
                         <div class="cover" style="--accent: {{ track.accent }};">
-                            <span>{{ track.title|slice:":1" }}</span>
+                            <span class="cover-letter">{{ track.title|slice:":1" }}</span>
+                            {% comment %}
+                                Swapped in for the letter while this track is
+                                playing; app.js toggles is-playing on the row.
+                            {% endcomment %}
+                            <span class="visualizer visualizer-mini" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span>
+                            </span>
                         </div>
                         <div class="song-info">
                             <h3>{{ track.title }}</h3>

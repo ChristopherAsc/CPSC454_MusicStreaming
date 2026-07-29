@@ -128,8 +128,22 @@ function applyVolume(level) {
     syncVolumeControl();
 }
 
+// Mark the row of the track being played so it shows the visualizer instead of
+// its initial. Driven by activeSha256 rather than by the clicked button, so a
+// track started from the search dropdown lights up its row in the list too.
+function updatePlayingRow() {
+    rows.forEach((row) => {
+        const isActive = Boolean(activeSha256)
+            && row.dataset.sha256 === activeSha256;
+
+        row.classList.toggle("is-playing", isActive);
+        row.classList.toggle("is-paused", isActive && !isPlaying);
+    });
+}
+
 function setPlaybackState(playing) {
     isPlaying = playing;
+    updatePlayingRow();
 
     if (playToggle) {
         playToggle.setAttribute("aria-label", playing ? "Pause" : "Play");
@@ -190,6 +204,7 @@ function beginPlayback(sha256) {
     }
 
     activeSha256 = sha256;
+    updatePlayingRow();
     audioPlayer.loadTrack(sha256);
 }
 

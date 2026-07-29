@@ -1224,3 +1224,58 @@ button,
   color: var(--text-dim);
   cursor: default;
 }
+
+/* Now-playing indicator on the track list.
+   Reuses .visualizer (same bounce animation and accent) at row scale, sitting
+   in the cover square in place of the track's initial. */
+
+.track-row .cover {
+  display: grid;
+  place-items: center;
+}
+
+/* Stack the letter and the bars in one cell so swapping them never reflows. */
+.track-row .cover > .cover-letter,
+.track-row .cover > .visualizer-mini {
+  grid-area: 1 / 1;
+}
+
+.visualizer-mini {
+  align-items: end;
+  display: none;
+  gap: 3px;
+  height: 22px;
+}
+
+.visualizer-mini span {
+  border-radius: 2px;
+  /* The cover is filled with the row's accent, so the bars take the cover's
+     foreground colour instead -- var(--accent) on var(--accent) is invisible. */
+  background: #11131a;
+  width: 4px;
+}
+
+.track-row.is-playing .cover > .cover-letter {
+  visibility: hidden;
+}
+
+.track-row.is-playing .visualizer-mini {
+  display: flex;
+}
+
+/* Paused is still "the current track", so the bars stay put rather than vanish. */
+.track-row.is-playing.is-paused .visualizer-mini span {
+  animation-play-state: paused;
+}
+
+.track-row.is-playing {
+  background: #202631;
+  border-color: var(--panel-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .visualizer span,
+  .visualizer-mini span {
+    animation: none;
+  }
+}
