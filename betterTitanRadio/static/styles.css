@@ -455,31 +455,6 @@ body {
   color: var(--text);
 }
 
-.server-panel {
-  border-top: 1px solid var(--panel-border);
-  padding-top: 1.25rem;
-}
-
-.server-panel ul {
-  color: var(--text-dim);
-  display: grid;
-  gap: 0.8rem;
-  list-style: none;
-}
-
-.server-panel li {
-  align-items: center;
-  display: flex;
-  gap: 0.55rem;
-}
-
-.server-panel li span {
-  background: var(--accent);
-  border-radius: 999px;
-  height: 9px;
-  width: 9px;
-}
-
 .content {
   display: block;
   min-width: 0;
@@ -568,6 +543,7 @@ button,
 .icon-button,
 .danger-button,
 .wide-button {
+  align-items: center;
   border: 0;
   border-radius: 8px;
   cursor: pointer;
@@ -602,8 +578,8 @@ button,
 }
 
 .download-button svg {
-  width: 50;
-  height: 50px;
+  height: 22px;
+  width: 22px;
 }
 
 .download-button:hover {
@@ -711,10 +687,14 @@ button,
   border: 1px solid transparent;
   border-radius: 8px;
   display: grid;
-  gap: 0.8rem;
-  grid-template-columns: minmax(260px, 1.6fr) minmax(150px, 0.9fr) 72px 88px minmax(210px, 1fr);
+  gap: 0.55rem;
+  grid-template-columns: minmax(200px, 1.45fr) minmax(110px, 0.8fr) 54px 70px minmax(154px, auto);
   min-height: 76px;
   padding: 0.75rem;
+}
+
+.track-row > * {
+  min-width: 0;
 }
 
 .track-row:not(.table-head):hover {
@@ -752,6 +732,14 @@ button,
   margin-bottom: 0.25rem;
 }
 
+.song-info h3,
+.song-info p,
+.track-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .song-info p,
 .track-row > span,
 .time-code,
@@ -771,10 +759,30 @@ button,
 }
 
 .row-actions {
+  align-items: center;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.45rem;
   justify-content: flex-end;
+  min-width: 0;
+}
+
+.row-actions button,
+.row-actions .danger-button,
+.row-actions .download-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+}
+
+.row-actions button,
+.row-actions .danger-button {
+  padding: 0.55rem 0.7rem;
+}
+
+.row-actions .download-button {
+  height: 36px;
+  min-width: 36px;
+  width: 36px;
 }
 
 .drop-zone {
