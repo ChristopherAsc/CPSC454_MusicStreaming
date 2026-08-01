@@ -5,3 +5,10 @@ python-dotenv==1.2.2
 sqlparse==0.5.5
 tzdata==2026.3
 mutagen
+django-storages==1.14.6
+boto3==1.40.29
+
+# PCM streaming (manage.py runstreamserver). Also needs the ffmpeg binary on
+# PATH -- pip cannot install that: `sudo apt install ffmpeg`.
+ffmpeg-python==0.2.0
+websockets>=11

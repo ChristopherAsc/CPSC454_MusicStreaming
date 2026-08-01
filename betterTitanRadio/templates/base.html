@@ -5,7 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Better Titan Radio</title>
-    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    {% comment %}
+        Where the browser reaches the WebSocket bridge fronting the PCM stream
+        server. Set STREAM_BRIDGE_URL when it differs from the bind address.
+    {% endcomment %}
+    <meta name="stream-bridge-url" content="{{ stream_bridge_url }}">
+    <link rel="stylesheet" href="{% static 'styles.css' %}?v=7">
 </head>
 <body>
     <div class="app-shell">
@@ -18,52 +23,52 @@
                 </div>
             </div>
             
-            {% comment %} /* ---------------------- these currently don't work ---------------------- */ {% endcomment %}
             <nav class="nav-links">
                 <a href="{% url 'home' %}">Dashboard</a>
-                <a href="{% url 'profile' %}">Profile</a>
+                <a href="{% url 'upload' %}" data-upload-open>Upload</a>
+                <a href="{% url 'api_tracks' %}">JSON API</a>
+                <a href="{% url 'test' %}">Test</a>
                 <a href="/admin/">Admin</a>
+                <a href="{% url 'settings' %}">Settings</a>
             </nav>
-
-            <section class="server-panel" aria-labelledby="server-heading">
-                <h2 id="server-heading">Server Connection</h2>
-                <ul>
-                    <li><span></span>Django dev server</li>
-                    <li><span></span>SQLite music index</li>
-                    <li><span></span>VPN tunnel placeholder</li>
-                </ul>
-            </section>
         </aside>
 
-        {% comment %} /* ---------------------------------------------------------------------------- */
-        /*                             the content goes here                            */
-        /* ---------------------------------------------------------------------------- */ {% endcomment %}
         <main id="dashboard" class="content">
             {% block content %}{% endblock %}
         </main>
-        {% comment %} /* ---------------------------------------------------------------------------- */ {% endcomment %}
         <footer class="player-bar" aria-label="Now playing">
+            {% comment %}
+                Playback is Web Audio, driven by static/pcm_player.js -- there
+                is no media element to attach a src to.
+            {% endcomment %}
             <div id="player-cover" class="mini-cover">T</div>
             <div class="player-meta">
                 <strong id="player-title">Titan Nights</strong>
                 <span id="player-artist">Campus Radio</span>
             </div>
-            <button type="button" aria-label="Previous song" class="primary-control icon-button">
+            <button id="previous-track" type="button" aria-label="Previous song" class="primary-control icon-button">
                 <img src="{% static 'images/rewind.svg' %}" alt="Previous" class="image-button">
             </button>
             <button id="play-toggle" class="primary-control" type="button" aria-label="Play or pause">
                 <img id="play-icon" src="{% static 'images/play.svg' %}" alt="Play" class="image-button">
                 <img id="pause-icon" src="{% static 'images/pause.svg' %}" alt="Pause" hidden>
             </button>
-            <button type="button" aria-label="Next song" class="primary-control icon-button">
+            <button id="next-track" type="button" aria-label="Next song" class="primary-control icon-button">
                 <img src="{% static 'images/fastforward.svg' %}" alt="Next" class="image-button">
             </button>
-            <div class="progress" aria-hidden="true">
+            <label class="progress" aria-label="Playback position">
+                <input id="progress-range" type="range" min="0" max="100" value="0" step="0.1">
                 <span id="progress-bar"></span>
-            </div>
-            <span class="time-code">1:34 / 3:42</span>
+            </label>
+            <label class="volume-control" aria-label="Volume">
+                <span class="volume-label">Vol</span>
+                <input id="volume-range" type="range" min="0" max="100" value="100" step="1">
+            </label>
+            <span id="time-code" class="time-code">0:00 / 0:00</span>
         </footer>
     </div>
-    <script src="{% static 'app.js' %}?v=2"></script>
+    <script src="{% static 'pcm_player.js' %}?v=2"></script>
+    <script src="{% static 'app.js' %}?v=9"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

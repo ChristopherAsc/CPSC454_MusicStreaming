@@ -1,7 +1,7 @@
 <h1>Better Titan Radio</h1>
 
 <p>
-    <a href="{% url 'radio:upload' %}">
+    <a href="{% url 'upload' %}">
         Upload music
     </a>
 </p>
@@ -19,13 +19,13 @@
 
         <audio controls preload="metadata">
             <source
-                src="{% url 'radio:stream' track.id %}"
+                src="{% url 'stream_track' track.id %}"
                 type="{{ track.mime_type }}"
             >
         </audio>
 
         <p>
-            <a href="{% url 'radio:download' track.id %}">
+            <a href="{% url 'download_track' track.id %}">
                 Download
             </a>
         </p>
