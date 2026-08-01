@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+
 
 {% block content %}
 
@@ -9,14 +9,10 @@
         <p class="eyebrow">Cloud music dashboard</p>
         <h2>Stream, upload, download, and monitor your personal Titan music server.</h2>
     </div>
-<div class="search-wrapper">
-    <form class="search-form" role="search" onsubmit="return false;">
+    <form class="search-form" role="search" action="{% url 'search' %}">
         <label for="song-search">Search</label>
-        <input id="song-search" type="search" placeholder="Search songs or artists" autocomplete="off">
+        <input id="song-search" type="search" placeholder="Search songs or artists">
     </form>
-    <ul id="search-dropdown" class="search-dropdown" hidden></ul>
-</div>
-
 </header>
 
 <section class="hero">
@@ -25,12 +21,8 @@
         <h2 id="hero-title">Titan Nights</h2>
         <p id="hero-meta">Campus Radio · Ready to stream from the server library.</p>
         <div class="hero-actions">
-            {% if tracks %}
-                <button type="button" data-play-title="{{ tracks.0.title }}" data-play-artist="{{ tracks.0.artist }}" data-sha256="{{ tracks.0.sha256 }}" data-stream-url="{{ tracks.0.stream_url }}">Play latest</button>
-                <a class="secondary-button" href="{{ tracks.0.download_url }}">Download latest</a>
-            {% else %}
-                <button class="secondary-button" type="button" data-upload-open>Upload music</button>
-            {% endif %}
+            <button type="button" data-play-title="Titan Nights" data-play-artist="Campus Radio">Play track</button>
+            <button class="secondary-button" type="button">Download</button>
         </div>
     </div>
     <div class="visualizer" aria-hidden="true">
@@ -71,17 +63,10 @@
                 <span role="columnheader">Actions</span>
             </div>
             {% for track in tracks %}
-                <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" data-sha256="{{ track.sha256 }}" data-stream-url="{{ track.stream_url }}" role="row">
+                <article class="track-row" data-track-row data-title="{{ track.title }}" data-artist="{{ track.artist }}" role="row">
                     <div class="track-main" role="cell">
                         <div class="cover" style="--accent: {{ track.accent }};">
-                            <span class="cover-letter">{{ track.title|slice:":1" }}</span>
-                            {% comment %}
-                                Swapped in for the letter while this track is
-                                playing; app.js toggles is-playing on the row.
-                            {% endcomment %}
-                            <span class="visualizer visualizer-mini" aria-hidden="true">
-                                <span></span><span></span><span></span><span></span>
-                            </span>
+                            <span>{{ track.title|slice:":1" }}</span>
                         </div>
                         <div class="song-info">
                             <h3>{{ track.title }}</h3>
@@ -92,11 +77,9 @@
                     <span role="cell">{{ track.format }}</span>
                     <span class="status-pill {{ track.status|lower }}" role="cell">{{ track.status }}</span>
                     <div class="row-actions" role="cell">
-                        <button type="button" data-play-title="{{ track.title }}" data-play-artist="{{ track.artist }}" data-sha256="{{ track.sha256 }}" data-stream-url="{{ track.stream_url }}">Play</button>
-                        <a class="icon-button download-button" href="{{ track.download_url }}" aria-label="Download {{ track.title }}">
-                            <img src="{% static 'images/download.svg' %}" alt="" aria-hidden="true">
-                        </a>
-                        <a class="danger-button" href="{% url 'api_tracks' %}" aria-label="View API data for {{ track.title }}">API</a>
+                        <button type="button" data-play-title="{{ track.title }}" data-play-artist="{{ track.artist }}">Play</button>
+                        <button class="icon-button" type="button" aria-label="Download {{ track.title }}">Down</button>
+                        <button class="danger-button" type="button" aria-label="Remove {{ track.title }}">Remove</button>
                     </div>
                 </article>
             {% endfor %}
@@ -106,13 +89,14 @@
 
     <aside id="upload" class="control-stack" aria-label="Upload and queue controls">
         <section class="upload-panel">
-            <p class="eyebrow">Library</p>
-            <h2>Add Music</h2>
-            {% comment %}
-                One control only. It opens the upload window, where the choice
-                between a single file and a whole folder is made.
-            {% endcomment %}
-            <button class="wide-button" type="button" data-upload-open>Upload music</button>
+            <p class="eyebrow">Folder upload</p>
+            <h2>Sync a Music Folder</h2>
+            <label class="drop-zone" for="folder-upload">
+                <strong>Choose music folder</strong>
+                <span>Frontend placeholder for browser-based folder upload.</span>
+                <input id="folder-upload" type="file" webkitdirectory directory multiple>
+            </label>
+            <button class="wide-button" type="button">Start upload scan</button>
         </section>
 
         <section class="queue-panel">
@@ -123,48 +107,14 @@
                 </div>
             </div>
             <ul>
-                {% for item in upload_queue %}<li><span>{{ item.name }}</span><strong>{{ item.state }}</strong></li>{% empty %}<li><span>No uploads queued.</span></li>{% endfor %}
+                {% for item in upload_queue %}
+                    <li>
+                        <span>{{ item.name }}</span>
+                        <strong>{{ item.state }}</strong>
+                    </li>
+                {% endfor %}
             </ul>
         </section>
-    </aside>
+    </div>
 </section>
-
-<div id="upload-modal" class="modal-backdrop" hidden>
-    <section class="upload-modal" role="dialog" aria-modal="true" aria-labelledby="upload-modal-title">
-        <div class="modal-header">
-            <div>
-                <p class="eyebrow">Upload music</p>
-                <h2 id="upload-modal-title">Add Tracks To Library</h2>
-            </div>
-            <button class="modal-close" type="button" aria-label="Close upload window" data-upload-close>Close</button>
-        </div>
-
-        <form class="modal-upload-form" method="post" action="{% url 'api_upload' %}" enctype="multipart/form-data" data-upload-form>
-            {% csrf_token %}
-            <label class="drop-zone" for="modal-file-upload">
-                <strong>Choose an audio file</strong>
-                <span>MP3, WAV, FLAC, M4A, AAC, OGG, or OPUS files are supported.</span>
-                <input id="modal-file-upload" type="file" name="file" accept="audio/*" required>
-            </label>
-            <div id="upload-status" class="upload-status" role="status" aria-live="polite" hidden></div>
-            <button class="wide-button" type="submit">Upload selected file</button>
-        </form>
-
-        <form class="modal-upload-form" method="post" action="{% url 'api_upload_folder' %}" enctype="multipart/form-data" data-folder-form>
-            {% csrf_token %}
-            <label class="drop-zone" for="modal-folder-upload">
-                <strong>...or choose a whole folder</strong>
-                <span>Every audio file inside is uploaded, subfolders included. Anything else (artwork, playlists) is skipped.</span>
-                {% comment %}
-                    webkitdirectory turns this into a directory picker. It is
-                    non-standard but supported by every current browser; where
-                    it is not, this degrades to an ordinary multi-file input.
-                {% endcomment %}
-                <input id="modal-folder-upload" type="file" name="files" webkitdirectory directory multiple>
-            </label>
-            <div id="folder-status" class="upload-status" role="status" aria-live="polite" hidden></div>
-            <button class="wide-button" type="submit" data-folder-submit>Upload folder</button>
-        </form>
-    </section>
-</div>
 {% endblock %}
